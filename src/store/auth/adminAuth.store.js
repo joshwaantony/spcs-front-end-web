@@ -123,38 +123,29 @@ import {
   refreshAuthSession,
   requestOtp,
   verifyOtp,
-} from "@/services/admin/auth.api";
+} from "@/services/auth/auth.api";
 
 const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
-const REFRESH_TOKEN_KEY = "spcs_admin_refresh_token";
 const USER_KEY = "spcs_auth_user";
 
 const getAccessTokenFromResponse = (data) =>
   data?.data?.accessToken || data?.data?.token || data?.accessToken || null;
-
-const getRefreshTokenFromResponse = (data) =>
-  data?.data?.refreshToken || data?.refreshToken || null;
 
 const getUserFromResponse = (data) =>
   data?.data?.user || data?.user || data?.data || null;
 
 const normalizeSessionFromResponse = (data) => ({
   accessToken: getAccessTokenFromResponse(data),
-  refreshToken: getRefreshTokenFromResponse(data),
   user: getUserFromResponse(data),
 });
 
-const persistSession = ({ accessToken, refreshToken, user }) => {
+const persistSession = ({ accessToken, user }) => {
   if (typeof window === "undefined") {
     return;
   }
 
   if (accessToken) {
     localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  }
-
-  if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
 
   if (user) {
@@ -187,7 +178,6 @@ const clearSession = () => {
   }
 
   localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 };
 
@@ -199,8 +189,8 @@ export const useAdminAuthStore = create((set, get) => ({
   pendingPhone: "",
   bootstrapped: false,
 
-  setSession: ({ accessToken, refreshToken, user }) => {
-    persistSession({ accessToken, refreshToken, user });
+  setSession: ({ accessToken, user }) => {
+    persistSession({ accessToken, user });
 
     set({
       user: user || null,
@@ -222,19 +212,19 @@ export const useAdminAuthStore = create((set, get) => ({
   },
 
   hydrateSessionFromAuthResponse: async (data) => {
-    const { accessToken, refreshToken, user } = normalizeSessionFromResponse(data);
+    const { accessToken, user } = normalizeSessionFromResponse(data);
 
     if (!data?.success || !accessToken) {
       throw new Error(data?.message || "Authentication failed");
     }
 
-    persistSession({ accessToken, refreshToken, user });
+    persistSession({ accessToken, user });
 
     try {
       return await get().fetchMe();
     } catch (error) {
       if (user) {
-        get().setSession({ accessToken, refreshToken, user });
+        get().setSession({ accessToken, user });
         return user;
       }
 
@@ -264,13 +254,17 @@ export const useAdminAuthStore = create((set, get) => ({
       try {
         const refreshData = await refreshAuthSession();
         const accessToken = getAccessTokenFromResponse(refreshData);
-        const refreshToken = getRefreshTokenFromResponse(refreshData);
+        const refreshedUser = getUserFromResponse(refreshData);
 
         if (accessToken) {
           persistSession({
             accessToken,
-            refreshToken,
-            user: storedUser,
+            user: refreshedUser || storedUser,
+          });
+
+          set({
+            user: refreshedUser || storedUser,
+            isAuthenticated: true,
           });
         }
       } catch {}
@@ -279,7 +273,9 @@ export const useAdminAuthStore = create((set, get) => ({
         typeof window !== "undefined" &&
         localStorage.getItem(ACCESS_TOKEN_KEY)
       ) {
-        await get().fetchMe();
+        if (!get().user) {
+          await get().fetchMe();
+        }
       } else {
         clearSession();
         set({

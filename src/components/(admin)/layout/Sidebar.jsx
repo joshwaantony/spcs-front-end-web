@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useAdminAuthStore } from "@/store/admin/adminAuth.store";
+import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 
 import {
   HiViewGrid,

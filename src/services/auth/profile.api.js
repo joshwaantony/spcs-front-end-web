@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@/services/admin/auth.api";
+import { getCurrentUser } from "@/services/auth/auth.api";
 
 export const getAdminProfile = async () => {
   return getCurrentUser();

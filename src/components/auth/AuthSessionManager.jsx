@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAdminAuthStore } from "@/store/admin/adminAuth.store";
+import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 import {
   getPostLoginRoute,
   getPrimaryRole,
@@ -60,11 +60,6 @@ export default function AuthSessionManager() {
     }
 
     if (shouldRequireAdmin(pathname) && primaryRole !== "ADMIN") {
-      router.replace(getPostLoginRoute(user));
-      return;
-    }
-
-    if (pathname.startsWith("/writer") && primaryRole !== "WRITER") {
       router.replace(getPostLoginRoute(user));
       return;
     }

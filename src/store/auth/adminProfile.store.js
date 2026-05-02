@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { getAdminProfile } from "@/services/admin/profile.api";
+import { getAdminProfile } from "@/services/auth/profile.api";
 
 export const useAdminProfileStore = create((set) => ({
   profile: null,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { forgotPassword } from "@/services/admin/auth.api";
+import { forgotPassword } from "@/services/auth/auth.api";
 import { useToastStore } from "@/store/ui/toast.store";
 
 export default function ForgotPasswordPage() {

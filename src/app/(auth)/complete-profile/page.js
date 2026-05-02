@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAdminAuthStore } from "@/store/admin/adminAuth.store";
+import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 import { useToastStore } from "@/store/ui/toast.store";
 import { getPostLoginRoute } from "@/lib/auth-routing";
 

@@ -11,7 +11,7 @@ export const getCategories = async ({ page = 1, limit = 10, search = "" } = {}) 
       params.set("search", search.trim());
     }
 
-    const res = await api.get(`/admin/categories?${params.toString()}`);
+    const res = await api.get(`/v1/categories?${params.toString()}`);
     return res;
   } catch (error) {
     throw error?.data || error || { message: "Failed to fetch categories" };
@@ -20,7 +20,7 @@ export const getCategories = async ({ page = 1, limit = 10, search = "" } = {}) 
 
 export const createCategory = async (payload) => {
   try {
-    const res = await api.post("/admin/categories", payload);
+    const res = await api.post("/v1/categories", payload);
     return res;
   } catch (error) {
     throw error?.data || error || { message: "Failed to create category" };
@@ -29,7 +29,7 @@ export const createCategory = async (payload) => {
 
 export const updateCategory = async (categoryId, payload) => {
   try {
-    const res = await api.put(`/admin/categories/${categoryId}`, payload);
+    const res = await api.put(`/v1/categories/${categoryId}`, payload);
     return res;
   } catch (error) {
     throw error?.data || error || { message: "Failed to update category" };
@@ -38,7 +38,7 @@ export const updateCategory = async (categoryId, payload) => {
 
 export const deleteCategory = async (categoryId) => {
   try {
-    const res = await api.delete(`/admin/categories/${categoryId}`);
+    const res = await api.delete(`/v1/categories/${categoryId}`);
     return res;
   } catch (error) {
     throw error?.data || error || { message: "Failed to delete category" };
