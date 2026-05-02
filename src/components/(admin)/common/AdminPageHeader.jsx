@@ -73,7 +73,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAdminProfileStore } from "@/store/admin/adminProfile.store";
+import { useAdminProfileStore } from "@/store/auth/adminProfile.store";
 
 export default function AdminPageHeader({ title }) {
   const { profile, fetchProfile } = useAdminProfileStore();

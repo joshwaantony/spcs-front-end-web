@@ -20,10 +20,68 @@ const normalizeCategory = (category) => {
     ...category,
     id: category.id || category.category_id || "",
     category_id: category.category_id || category.id || "",
+    slug: category.slug || "",
+    parentId: category.parentId || category.parent_id || null,
+    parent_id: category.parent_id || category.parentId || null,
+    sortOrder:
+      typeof category.sortOrder === "number"
+        ? category.sortOrder
+        : typeof category.sort_order === "number"
+          ? category.sort_order
+          : 0,
+    sort_order:
+      typeof category.sort_order === "number"
+        ? category.sort_order
+        : typeof category.sortOrder === "number"
+          ? category.sortOrder
+          : 0,
+    isActive:
+      typeof category.isActive === "boolean"
+        ? category.isActive
+        : typeof category.is_active === "boolean"
+          ? category.is_active
+          : true,
+    is_active:
+      typeof category.is_active === "boolean"
+        ? category.is_active
+        : typeof category.isActive === "boolean"
+          ? category.isActive
+          : true,
     createdAt: category.createdAt || category.created_at || "",
     created_at: category.created_at || category.createdAt || "",
     updatedAt: category.updatedAt || category.updated_at || "",
     updated_at: category.updated_at || category.updatedAt || "",
+  };
+};
+
+const normalizeCategoryCollection = (data) => {
+  const rawItems = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data?.categories)
+        ? data.categories
+        : Array.isArray(data?.data)
+          ? data.data
+          : [];
+
+  return rawItems.map(normalizeCategory).filter(Boolean);
+};
+
+const getCategoryMeta = (responseData, fallbackPage, fallbackLimit, itemCount) => {
+  const meta = responseData?.meta || {};
+  const limit = meta.limit || responseData?.limit || fallbackLimit;
+  const total = meta.total || responseData?.total || itemCount;
+  const totalPages =
+    meta.totalPages ||
+    responseData?.totalPages ||
+    (total > 0 ? Math.ceil(total / limit) : 0);
+
+  return {
+    page: meta.page || responseData?.page || fallbackPage,
+    limit,
+    total,
+    totalPages,
   };
 };
 
@@ -139,13 +197,21 @@ export const useCategoryStore = create((set) => ({
         search: activeSearch,
       });
 
+      const categories = normalizeCategoryCollection(res?.data);
+      const pagination = getCategoryMeta(
+        res?.data,
+        page,
+        limit,
+        categories.length
+      );
+
       if (isSuccessResponse(res)) {
         set({
-          categories: (res.data?.items || []).map(normalizeCategory).filter(Boolean),
-          page: res.data?.page || page,
-          limit: res.data?.limit || limit,
-          total: res.data?.total || 0,
-          totalPages: res.data?.totalPages || 0,
+          categories,
+          page: pagination.page,
+          limit: pagination.limit,
+          total: pagination.total,
+          totalPages: pagination.totalPages,
           search: activeSearch,
           inputSearch: activeSearch,
           loading: false,

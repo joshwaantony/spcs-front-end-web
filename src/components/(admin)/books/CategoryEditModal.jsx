@@ -12,6 +12,7 @@ export default function CategoryEditModal({
   onSuccess = () => {},
 }) {
   const [name, setName] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const showToast = useToastStore((state) => state.showToast);
   const {
     page,
@@ -26,6 +27,7 @@ export default function CategoryEditModal({
   useEffect(() => {
     if (isOpen && category?.name) {
       setName(category.name);
+      setIsActive(category?.isActive ?? category?.is_active ?? true);
       resetUpdateCategoryState();
     }
   }, [isOpen, category, resetUpdateCategoryState]);
@@ -62,7 +64,10 @@ export default function CategoryEditModal({
     }
 
     try {
-      const res = await updateCategory(categoryId, { name: trimmedName });
+      const res = await updateCategory(categoryId, {
+        name: trimmedName,
+        isActive,
+      });
       await fetchCategories(page || 1, limit || 10);
       resetUpdateCategoryState();
       onClose();
@@ -133,6 +138,31 @@ export default function CategoryEditModal({
                     placeholder="Geography"
                     className="h-14 w-full rounded-full border border-gray-200 bg-white px-6 text-sm font-semibold text-[#141810] placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-[#46EC12]/30"
                   />
+
+                  <div className="mt-5 rounded-[24px] border border-[#e7eedc] bg-[#fbfdf7] px-5 py-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7b8a63]">
+                          Status
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#141810]">
+                          Keep this category visible in the admin selection list
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsActive((current) => !current)}
+                        className={`inline-flex h-10 min-w-[96px] items-center justify-center rounded-full px-4 text-xs font-bold transition ${
+                          isActive
+                            ? "bg-[#46EC12] text-[#141810]"
+                            : "bg-[#eef1ea] text-[#6B7280]"
+                        }`}
+                      >
+                        {isActive ? "Active" : "Inactive"}
+                      </button>
+                    </div>
+                  </div>
 
                   {updateError && (
                     <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">

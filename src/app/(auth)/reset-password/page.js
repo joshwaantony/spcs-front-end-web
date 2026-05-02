@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { resetPassword } from "@/services/admin/auth.api";
+import { resetPassword } from "@/services/auth/auth.api";
 import { useToastStore } from "@/store/ui/toast.store";
 
 function ResetPasswordContent() {

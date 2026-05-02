@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAdminAuthStore } from "@/store/admin/adminAuth.store";
+import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 import { useToastStore } from "@/store/ui/toast.store";
 import { HiEye, HiEyeOff, HiLockClosed, HiMail } from "react-icons/hi";
 

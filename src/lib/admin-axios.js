@@ -20,7 +20,7 @@ const api = axios.create({
 });
 
 const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
-const REFRESH_TOKEN_KEY = "spcs_admin_refresh_token";
+const USER_KEY = "spcs_auth_user";
 
 let refreshPromise = null;
 
@@ -72,7 +72,8 @@ api.interceptors.response.use(
       error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      originalRequest.url !== "/auth/refresh";
+      originalRequest.url !== "/auth/refresh" &&
+      originalRequest.url !== "/v1/auth/refresh";
 
     if (shouldRefresh) {
       originalRequest._retry = true;
@@ -97,9 +98,10 @@ api.interceptors.response.use(
           refreshedData?.data?.accessToken ||
           refreshedData?.data?.token ||
           refreshedData?.accessToken;
-        const newRefreshToken =
-          refreshedData?.data?.refreshToken ||
-          refreshedData?.refreshToken;
+        const refreshedUser =
+          refreshedData?.data?.user ||
+          refreshedData?.user ||
+          null;
 
         if (!newToken) {
           throw new Error("Invalid refresh response");
@@ -107,8 +109,8 @@ api.interceptors.response.use(
 
         localStorage.setItem(ACCESS_TOKEN_KEY, newToken);
 
-        if (newRefreshToken) {
-          localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+        if (refreshedUser) {
+          localStorage.setItem(USER_KEY, JSON.stringify(refreshedUser));
         }
 
         originalRequest.headers = originalRequest.headers || {};
@@ -117,7 +119,6 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem(ACCESS_TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
 
         const message = getReadableRequestError(
           refreshError,

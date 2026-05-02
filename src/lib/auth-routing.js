@@ -8,8 +8,7 @@ export const AUTH_PUBLIC_PATHS = [
 ];
 
 export const ACCOUNT_HOME_PATH = "/account";
-export const WRITER_HOME_PATH = "/writer";
-export const ADMIN_HOME_PATH = "/admin/dashboard";
+export const ADMIN_HOME_PATH = "/admin";
 
 export function getPrimaryRole(user) {
   if (!user) {
@@ -38,10 +37,6 @@ export function getPostLoginRoute(user) {
     return ADMIN_HOME_PATH;
   }
 
-  if (role === "WRITER") {
-    return WRITER_HOME_PATH;
-  }
-
   return ACCOUNT_HOME_PATH;
 }
 
@@ -52,11 +47,7 @@ export function isAuthPage(pathname) {
 }
 
 export function isProtectedPath(pathname) {
-  return (
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/account") ||
-    pathname.startsWith("/writer")
-  );
+  return pathname.startsWith("/admin") || pathname.startsWith("/account");
 }
 
 export function shouldRequireAdmin(pathname) {
