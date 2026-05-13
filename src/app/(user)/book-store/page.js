@@ -1,46 +1,18 @@
-import SidebarFilters from "@/components/(user)/book-store/SidebarFilters";
-import ProductGrid from "@/components/(user)/book-store/ProductGrid";
-import Breadcrumb from "@/components/(user)/book-store/Breadcrumb";
-import Pagination from "@/components/(user)/book-store/Pagination";
+import CatalogPageShell from "@/components/(user)/book-store/CatalogPageShell";
 
-export default function BookStorePage() {
+export default function BookStorePage({ searchParams }) {
   return (
-    <div
-      className="
-        relative min-h-screen overflow-x-hidden font-display text-[#111418]
-        bg-gradient-to-br from-[#F7FAFF] via-[#FDFDFF] to-[#F6F0FF]
-      "
-    >
-      {/* Background blobs */}
-      <div
-        className="
-          pointer-events-none absolute top-[-120px] left-[-120px]
-          w-[520px] h-[520px] rounded-full
-          bg-[#EAF2FF] opacity-70 blur-[120px]
-        "
-      />
-
-      <div
-        className="
-          pointer-events-none absolute bottom-[8%] right-[-80px]
-          w-[420px] h-[420px] rounded-full
-          bg-[#F3ECFF] opacity-70 blur-[120px]
-        "
-      />
-
-
-      <main className="relative z-10 container mx-auto px-4 md:px-8 py-8 max-w-[1400px]">
-        <Breadcrumb />
-
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          <SidebarFilters />
-          <div className="flex-1">
-            <ProductGrid />
-            <Pagination />
-          </div>
-        </div>
-      </main>
-
-    </div>
+    <CatalogPageShell
+      searchParams={searchParams}
+      basePath="/book-store"
+      currentPathLabel="Book Store"
+      title="Browse the full SPCS collection"
+      subtitle="Filter by category, price, language, stock, discount, discovery badges, or format and move through the catalog with backend-aligned pagination."
+      emptyTitle="No books matched these filters"
+      emptyDescription="Try a broader search, adjust price or language filters, or jump into a dedicated format page like E-Books or Audiobooks."
+      pageToneClassName="bg-[linear-gradient(135deg,#f6f9ff_0%,#fbfcff_46%,#f7f9ff_100%)]"
+      blobOneClassName="left-[-120px] top-[-120px] h-[520px] w-[520px] rounded-full bg-[#dce9ff] opacity-75 blur-[120px]"
+      blobTwoClassName="bottom-[8%] right-[-80px] h-[420px] w-[420px] rounded-full bg-[#eef1ff] opacity-80 blur-[120px]"
+    />
   );
 }

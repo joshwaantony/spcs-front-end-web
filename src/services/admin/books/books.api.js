@@ -1,9 +1,4 @@
-import api from "@/lib/admin-axios";
-import axios from "axios";
-
-const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
+import api, { apiRaw } from "@/lib/admin-axios";
 
 export const getBooks = async ({
   filter = "all",
@@ -121,22 +116,9 @@ export const exportBooksCsv = async ({
       params.set("filter", filter);
     }
 
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem(ACCESS_TOKEN_KEY)
-        : null;
-
-    const response = await axios.get(
-      `${API_ORIGIN}/api/admin/books/export/csv?${params.toString()}`,
-      {
-        responseType: "blob",
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : undefined,
-      }
-    );
+    const response = await apiRaw.get(`/admin/books/export/csv?${params.toString()}`, {
+      responseType: "blob",
+    });
 
     const disposition = response.headers["content-disposition"] || "";
     const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);

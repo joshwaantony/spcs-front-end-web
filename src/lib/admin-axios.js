@@ -6,23 +6,25 @@ import {
   readStoredAccessToken,
 } from "@/lib/auth-session";
 
-/* -------------------------------------------
-   BASE URL
--------------------------------------------- */
 const API_ORIGIN =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 /* -------------------------------------------
    AXIOS INSTANCE
 -------------------------------------------- */
-const api = axios.create({
-  baseURL: `${API_ORIGIN}/api/v1`,
-  timeout: 15000,
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+const createBaseClient = () =>
+  axios.create({
+    baseURL: `${API_ORIGIN}/api/v1`,
+    timeout: 15000,
+    withCredentials: true,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+const api = createBaseClient();
+
+const apiRaw = createBaseClient();
 
 let refreshPromise = null;
 
@@ -99,7 +101,7 @@ const refreshAccessToken = async () => {
   }
 };
 
-const retryWithRefreshedToken = async (originalRequest) => {
+const retryWithRefreshedToken = async (client, originalRequest) => {
   originalRequest._retry = true;
 
   const newToken = await refreshAccessToken();
@@ -107,97 +109,99 @@ const retryWithRefreshedToken = async (originalRequest) => {
   originalRequest.headers = originalRequest.headers || {};
   originalRequest.headers.Authorization = `Bearer ${newToken}`;
 
-  return api.request(originalRequest);
+  return client.request(originalRequest);
 };
 
-/* -------------------------------------------
-   REQUEST INTERCEPTOR (Attach Token)
--------------------------------------------- */
-api.interceptors.request.use(
-  (config) => {
-    if (typeof window !== "undefined") {
-      const token = readStoredAccessToken();
+const attachInterceptors = (client, { unwrapResponse }) => {
+  client.interceptors.request.use(
+    (config) => {
+      if (typeof window !== "undefined") {
+        const token = readStoredAccessToken();
 
-      if (token && !isRefreshRequest(config.url)) {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${token}`;
+        if (token && !isRefreshRequest(config.url)) {
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
-    }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
-/* -------------------------------------------
-   RESPONSE INTERCEPTOR
--------------------------------------------- */
-api.interceptors.response.use(
-  async (response) => {
-    const responseData = response.data;
-    const originalRequest = response.config;
-    const shouldRefreshFromBody =
-      typeof window !== "undefined" &&
-      originalRequest &&
-      !originalRequest._retry &&
-      !isRefreshRequest(originalRequest.url) &&
-      responseData?.success === false &&
-      isExpiredTokenMessage(responseData?.message || "");
+  client.interceptors.response.use(
+    async (response) => {
+      const responseData = response.data;
+      const originalRequest = response.config;
+      const shouldRefreshFromBody =
+        typeof window !== "undefined" &&
+        originalRequest &&
+        !originalRequest._retry &&
+        !isRefreshRequest(originalRequest.url) &&
+        responseData?.success === false &&
+        isExpiredTokenMessage(responseData?.message || "");
 
-    if (shouldRefreshFromBody) {
-      try {
-        return await retryWithRefreshedToken(originalRequest);
-      } catch (refreshError) {
-        const message = getReadableRequestError(
-          refreshError,
-          "Session expired"
-        );
+      if (shouldRefreshFromBody) {
+        try {
+          return await retryWithRefreshedToken(client, originalRequest);
+        } catch (refreshError) {
+          const message = getReadableRequestError(
+            refreshError,
+            "Session expired"
+          );
 
-        return Promise.reject({
-          status: refreshError.response?.status || 401,
-          message,
-          data: refreshError.response?.data,
-        });
+          return Promise.reject({
+            status: refreshError.response?.status || 401,
+            message,
+            data: refreshError.response?.data,
+          });
+        }
       }
-    }
 
-    return responseData;
-  },
-  async (error) => {
-    const originalRequest = error.config;
-    const shouldRefresh =
-      typeof window !== "undefined" &&
-      (error.response?.status === 401 ||
-        isExpiredTokenMessage(error.response?.data?.message || error.message || "")) &&
-      originalRequest &&
-      !originalRequest._retry &&
-      !isRefreshRequest(originalRequest.url);
+      return unwrapResponse ? responseData : response;
+    },
+    async (error) => {
+      const originalRequest = error.config;
+      const shouldRefresh =
+        typeof window !== "undefined" &&
+        (error.response?.status === 401 ||
+          isExpiredTokenMessage(
+            error.response?.data?.message || error.message || ""
+          )) &&
+        originalRequest &&
+        !originalRequest._retry &&
+        !isRefreshRequest(originalRequest.url);
 
-    if (shouldRefresh) {
-      try {
-        return await retryWithRefreshedToken(originalRequest);
-      } catch (refreshError) {
-        const message = getReadableRequestError(
-          refreshError,
-          "Session expired"
-        );
+      if (shouldRefresh) {
+        try {
+          return await retryWithRefreshedToken(client, originalRequest);
+        } catch (refreshError) {
+          const message = getReadableRequestError(
+            refreshError,
+            "Session expired"
+          );
 
-        return Promise.reject({
-          status: refreshError.response?.status || 401,
-          message,
-          data: refreshError.response?.data,
-        });
+          return Promise.reject({
+            status: refreshError.response?.status || 401,
+            message,
+            data: refreshError.response?.data,
+          });
+        }
       }
+
+      const message = getReadableRequestError(error, "Request failed");
+
+      return Promise.reject({
+        status: error.response?.status,
+        message,
+        data: error.response?.data,
+      });
     }
+  );
+};
 
-    const message = getReadableRequestError(error, "Request failed");
-
-    return Promise.reject({
-      status: error.response?.status,
-      message,
-      data: error.response?.data,
-    });
-  }
-);
+attachInterceptors(api, { unwrapResponse: true });
+attachInterceptors(apiRaw, { unwrapResponse: false });
 
 export default api;
+export { apiRaw };

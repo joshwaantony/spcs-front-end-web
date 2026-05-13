@@ -1,9 +1,4 @@
-import axios from "axios";
-import api from "@/lib/admin-axios";
-
-const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
+import api, { apiRaw } from "@/lib/admin-axios";
 
 export const getCustomers = async ({
   search = "",
@@ -58,20 +53,10 @@ export const exportCustomersCsv = async ({
       params.set("to_date", to_date);
     }
 
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem(ACCESS_TOKEN_KEY)
-        : null;
-
-    const response = await axios.get(
-      `${API_ORIGIN}/api/admin/customers/export/csv?${params.toString()}`,
+    const response = await apiRaw.get(
+      `/admin/customers/export/csv?${params.toString()}`,
       {
         responseType: "blob",
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : undefined,
       }
     );
 
