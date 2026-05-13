@@ -75,6 +75,23 @@ const filterBooksByAllowedFormats = (books, allowedFormats) => {
   return books.filter((book) => allowedFormats.includes(book.formatType));
 };
 
+const getFilteredMeta = (responseMeta, filteredBooks, allowedFormats) => {
+  if (!Array.isArray(allowedFormats) || allowedFormats.length === 0) {
+    return {
+      total: responseMeta.total,
+      totalPages: responseMeta.totalPages,
+    };
+  }
+
+  return {
+    total: filteredBooks.length,
+    totalPages: Math.max(
+      1,
+      Math.ceil(filteredBooks.length / Math.max(1, responseMeta.limit))
+    ),
+  };
+};
+
 export const useUserBookStore = create((set, get) => ({
   books: [],
   total: 0,
@@ -105,11 +122,16 @@ export const useUserBookStore = create((set, get) => ({
         response.books,
         overrides.allowedFormats
       );
+      const filteredMeta = getFilteredMeta(
+        response.meta,
+        books,
+        overrides.allowedFormats
+      );
 
       set({
         books,
-        total: books.length,
-        totalPages: Math.max(1, Math.ceil(books.length / response.meta.limit)),
+        total: filteredMeta.total,
+        totalPages: filteredMeta.totalPages,
         filters: {
           ...filters,
           page: response.meta.page,

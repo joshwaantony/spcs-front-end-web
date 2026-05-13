@@ -1,9 +1,11 @@
 import CatalogPageShell from "@/components/(user)/book-store/CatalogPageShell";
 
-export default function BookStorePage({ searchParams }) {
+export default async function BookStorePage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+
   return (
     <CatalogPageShell
-      searchParams={searchParams}
+      searchParams={resolvedSearchParams}
       basePath="/book-store"
       currentPathLabel="Book Store"
       title="Browse the full SPCS collection"

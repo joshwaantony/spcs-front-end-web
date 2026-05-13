@@ -76,7 +76,7 @@ export default function BookGrid({ activeTab = "all" }) {
       <div
         className="
           grid grid-cols-1
-          md:grid-cols-2
+          xl:grid-cols-2
           2xl:grid-cols-3
           gap-6 lg:gap-8
         "
@@ -85,15 +85,15 @@ export default function BookGrid({ activeTab = "all" }) {
           <div
             key={book.book_id || book.id}
             className="
-              group flex h-full flex-col overflow-hidden rounded-[28px] border border-[#E9ECE7] bg-white
-              md:flex-row lg:flex-col xl:flex-row
+              group flex h-full min-w-0 flex-col overflow-hidden rounded-[28px] border border-[#E9ECE7] bg-white
+              sm:flex-row xl:flex-col 2xl:flex-row
               transition-all
               shadow-[0_18px_40px_-30px_rgba(20,24,16,0.28)]
               hover:-translate-y-1 hover:shadow-[0_28px_60px_-30px_rgba(20,24,16,0.28)]
             "
           >
             {/* IMAGE */}
-            <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 md:w-[220px] md:min-w-[220px] md:aspect-auto lg:w-full lg:min-w-0 lg:aspect-[4/5] xl:w-[220px] xl:min-w-[220px] xl:aspect-auto">
+            <div className="relative aspect-[4/5] overflow-hidden bg-gray-100 sm:w-[220px] sm:min-w-[220px] sm:aspect-auto xl:w-full xl:min-w-0 xl:aspect-[4/5] 2xl:w-[220px] 2xl:min-w-[220px] 2xl:aspect-auto">
               <span
                 className={`absolute left-3 top-3 z-10 max-w-[calc(100%-24px)] rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] sm:left-auto sm:right-4 sm:top-4 sm:px-4 sm:py-2
                   ${
@@ -113,18 +113,18 @@ export default function BookGrid({ activeTab = "all" }) {
             </div>
 
             {/* CONTENT */}
-            <div className="flex flex-1 flex-col gap-4 p-4 sm:p-6">
+            <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-5 xl:p-6">
               <div className="space-y-3">
-                <h3 className="line-clamp-2 text-[18px] font-black leading-tight text-[#141810] sm:text-[22px]">
+                <h3 className="min-w-0 break-words text-[18px] font-black leading-tight text-[#141810] sm:text-[20px] xl:text-[22px]">
                   {book.name}
                 </h3>
-                <p className="text-sm font-medium text-[#141810]/70 sm:text-base">
+                <p className="break-words text-sm font-medium text-[#141810]/70 sm:text-base">
                   {book.author}
                 </p>
 
-                <div className="flex flex-wrap gap-2 text-xs font-bold uppercase tracking-[0.08em] text-[#6B7280]">
+                <div className="flex min-w-0 flex-wrap gap-2 text-xs font-bold uppercase tracking-[0.08em] text-[#6B7280]">
                   {book.category_name || book.category ? (
-                    <span className="rounded-full bg-[#F4F7EF] px-3 py-1.5 text-[#5F6F4C]">
+                    <span className="max-w-full break-words rounded-full bg-[#F4F7EF] px-3 py-1.5 text-[#5F6F4C]">
                       {book.category_name || book.category}
                     </span>
                   ) : null}
