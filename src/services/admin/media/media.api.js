@@ -10,6 +10,11 @@ const getUploadUrlFromResponse = (response) =>
   response?.url ||
   "";
 
+const getUploadFieldsFromResponse = (response) =>
+  response?.data?.fields ||
+  response?.fields ||
+  null;
+
 const getMediaIdFromResponse = (response) =>
   response?.data?.mediaId ||
   response?.data?.id ||
@@ -28,6 +33,8 @@ export const generateMediaUploadUrl = async (payload) => {
   }
 };
 
+export const generateUploadUrl = generateMediaUploadUrl;
+
 export const confirmMediaUpload = async (mediaId) => {
   try {
     const res = await api.post("/admin/media/confirm", { mediaId });
@@ -37,15 +44,41 @@ export const confirmMediaUpload = async (mediaId) => {
   }
 };
 
-export const uploadFileToSignedUrl = async ({ uploadUrl, file, signal }) => {
-  const response = await fetch(uploadUrl, {
-    method: "PUT",
-    headers: {
-      "Content-Type": file.type,
-    },
-    body: file,
-    signal,
-  });
+export const uploadFileToSignedUrl = async ({
+  uploadUrl,
+  uploadFields,
+  file,
+  signal,
+}) => {
+  const hasUploadFields =
+    uploadFields &&
+    typeof uploadFields === "object" &&
+    Object.keys(uploadFields).length > 0;
+
+  const response = hasUploadFields
+    ? await (() => {
+        const formData = new FormData();
+
+        Object.entries(uploadFields).forEach(([key, value]) => {
+          formData.append(key, value);
+        });
+
+        formData.append("file", file);
+
+        return fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+          signal,
+        });
+      })()
+    : await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type,
+        },
+        body: file,
+        signal,
+      });
 
   if (!response.ok) {
     throw new Error("File upload failed.");
@@ -53,6 +86,14 @@ export const uploadFileToSignedUrl = async ({ uploadUrl, file, signal }) => {
 
   return response;
 };
+
+export const uploadToS3 = async (uploadUrl, uploadFields, file, signal) =>
+  uploadFileToSignedUrl({
+    uploadUrl,
+    uploadFields,
+    file,
+    signal,
+  });
 
 export const uploadMediaAsset = async ({
   file,
@@ -75,17 +116,14 @@ export const uploadMediaAsset = async ({
   });
 
   const uploadUrl = getUploadUrlFromResponse(uploadUrlResponse);
+  const uploadFields = getUploadFieldsFromResponse(uploadUrlResponse);
   const mediaId = getMediaIdFromResponse(uploadUrlResponse);
 
   if (!uploadUrl || !mediaId) {
     throw new Error("Upload URL response is incomplete.");
   }
 
-  await uploadFileToSignedUrl({
-    uploadUrl,
-    file,
-    signal,
-  });
+  await uploadToS3(uploadUrl, uploadFields, file, signal);
 
   const confirmedResponse = await confirmMediaUpload(mediaId);
   const confirmedMedia = normalizeConfirmedMedia(confirmedResponse);

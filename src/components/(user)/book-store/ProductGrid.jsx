@@ -1,103 +1,61 @@
 
-
-
-
-
 import ProductCard from "./ProductCard";
 
-const products = [
-  {
-    title: "Huckleberry Finn",
-    author: "Mark Twain",
-    price: "₹190",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBGrb8TRJR1I_Fz_DV6QLdSPUAjJ78IDR0WXRU21ABJ5OjhKGuMr-xcq1zkRDfI3Kr97QI3Gf2Lx6WoVSiuXViNQK5R7g5kvR_oGNMxFyNm8CrtBGo4yv2iaEY6C6r8siSIHPbuoPO25nddgDHqg1-kpBLRPwC17x0JACJgurb9LzyPoV18kl7Iy1UMEOLlzfyS0WvHe_qYEHq76Jtu2HJoVT5A2dp-Fn-CFPHuymzbY2uPMn0nDDMhq5-7ek8ObZP2-YpdJv_aLjQ",
-  },
-  {
-    title: "The Mother",
-    author: "Maxim Gorky",
-    price: "₹460",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBxdhVtjRks0OYfRwZ8Yite8uX6dl6KoNNSI7x_HPCPbyXFl7si_ZZilmIHEJ_dyArqskh9MdU4tql5cY1wuFPu4LYGD2uRu8c-7FDpwwCdY7DOO48Fang8QAHHRuMx9_c98DRHiIQOgc4q-iwAZnKGSl1z5KbCjVzkE88uijOIq5fX82xWJ3wsF_WERVGpEWZyYcCyT0MR3hGcGIqS9SqM8hMXQsqn_2mGatisjNMZ7k7Msj-Vxr4_S2jCOsWAIrAaQ1FP3FqtF1Q",
-  },
-  {
-    title: "Huckleberry Finn",
-    author: "Mark Twain",
-    price: "₹190",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBGrb8TRJR1I_Fz_DV6QLdSPUAjJ78IDR0WXRU21ABJ5OjhKGuMr-xcq1zkRDfI3Kr97QI3Gf2Lx6WoVSiuXViNQK5R7g5kvR_oGNMxFyNm8CrtBGo4yv2iaEY6C6r8siSIHPbuoPO25nddgDHqg1-kpBLRPwC17x0JACJgurb9LzyPoV18kl7Iy1UMEOLlzfyS0WvHe_qYEHq76Jtu2HJoVT5A2dp-Fn-CFPHuymzbY2uPMn0nDDMhq5-7ek8ObZP2-YpdJv_aLjQ",
-  },
-  {
-    title: "The Mother",
-    author: "Maxim Gorky",
-    price: "₹460",
-    image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuBxdhVtjRks0OYfRwZ8Yite8uX6dl6KoNNSI7x_HPCPbyXFl7si_ZZilmIHEJ_dyArqskh9MdU4tql5cY1wuFPu4LYGD2uRu8c-7FDpwwCdY7DOO48Fang8QAHHRuMx9_c98DRHiIQOgc4q-iwAZnKGSl1z5KbCjVzkE88uijOIq5fX82xWJ3wsF_WERVGpEWZyYcCyT0MR3hGcGIqS9SqM8hMXQsqn_2mGatisjNMZ7k7Msj-Vxr4_S2jCOsWAIrAaQ1FP3FqtF1Q",
-  },
-];
-
-export default function ProductGrid() {
+function ProductCardSkeleton() {
   return (
-    <section className="py-10">
-      <div className="max-w-[1200px] mx-auto px-4">
-        <div className="
-          grid
-          grid-cols-1
-          sm:grid-cols-2
-          md:grid-cols-3
-          lg:grid-cols-4
-          gap-6
-        ">
-          {products.map((p, index) => (
-            <ProductCard key={index} {...p} />
+    <div className="overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_18px_45px_-30px_rgba(20,31,56,0.15)]">
+      <div className="h-[255px] animate-pulse bg-[linear-gradient(90deg,#f4f7fc_0%,#fbfcff_50%,#f4f7fc_100%)]" />
+      <div className="space-y-3 px-4 pb-4 pt-5">
+        <div className="h-5 w-3/4 animate-pulse rounded bg-slate-100" />
+        <div className="h-4 w-1/2 animate-pulse rounded bg-slate-100" />
+        <div className="mt-6 flex items-center justify-between">
+          <div className="h-8 w-20 animate-pulse rounded bg-slate-100" />
+          <div className="h-11 w-11 animate-pulse rounded-full bg-slate-100" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ProductGrid({
+  books,
+  loading,
+  emptyTitle,
+  emptyDescription,
+}) {
+  if (loading) {
+    return (
+      <section className="py-2">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <ProductCardSkeleton key={index} />
           ))}
         </div>
+      </section>
+    );
+  }
+
+  if (!books.length) {
+    return (
+      <section className="rounded-[30px] border border-dashed border-slate-200 bg-white/80 px-6 py-16 text-center shadow-[0_18px_60px_-36px_rgba(15,23,42,0.24)]">
+        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+          No Matches
+        </p>
+        <h2 className="mt-3 text-2xl font-black text-slate-900">{emptyTitle}</h2>
+        <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-6 text-slate-500">
+          {emptyDescription}
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+        {books.map((book) => (
+          <ProductCard key={book.id} book={book} />
+        ))}
       </div>
     </section>
   );
 }
-
-
-
-// import ProductCard from "./ProductCard";
-
-// const products = [
-//   {
-//     title: "Huckleberry Finn",
-//     author: "Mark Twain",
-//     price: "₹190",
-//     image:
-//       "https://lh3.googleusercontent.com/aida-public/AB6AXuBGrb8TRJR1I_Fz_DV6QLdSPUAjJ78IDR0WXRU21ABJ5OjhKGuMr-xcq1zkRDfI3Kr97QI3Gf2Lx6WoVSiuXViNQK5R7g5kvR_oGNMxFyNm8CrtBGo4yv2iaEY6C6r8siSIHPbuoPO25nddgDHqg1-kpBLRPwC17x0JACJgurb9LzyPoV18kl7Iy1UMEOLlzfyS0WvHe_qYEHq76Jtu2HJoVT5A2dp-Fn-CFPHuymzbY2uPMn0nDDMhq5-7ek8ObZP2-YpdJv_aLjQ",
-//   },
-//   {
-//     title: "The Mother",
-//     author: "Maxim Gorky",
-//     price: "₹460",
-//     image:
-//       "https://lh3.googleusercontent.com/aida-public/AB6AXuBxdhVtjRks0OYfRwZ8Yite8uX6dl6KoNNSI7x_HPCPbyXFl7si_ZZilmIHEJ_dyArqskh9MdU4tql5cY1wuFPu4LYGD2uRu8c-7FDpwwCdY7DOO48Fang8QAHHRuMx9_c98DRHiIQOgc4q-iwAZnKGSl1z5KbCjVzkE88uijOIq5fX82xWJ3wsF_WERVGpEWZyYcCyT0MR3hGcGIqS9SqM8hMXQsqn_2mGatisjNMZ7k7Msj-Vxr4_S2jCOsWAIrAaQ1FP3FqtF1Q",
-//   },
-// ];
-
-// export default function ProductGrid() {
-//   return (
-//     <section className="py-12">
-//       <div className="max-w-[1100px] mx-auto px-4">
-//         <div
-//           className="
-//             grid
-//             grid-cols-1
-//             sm:grid-cols-2
-//             md:grid-cols-3
-//             lg:grid-cols-4
-//             gap-8
-//             place-items-center
-//           "
-//         >
-//           {products.map((p, index) => (
-//             <ProductCard key={index} {...p} />
-//           ))}
-//         </div>
-//       </div>
-//     </section>
-//   );
-// }

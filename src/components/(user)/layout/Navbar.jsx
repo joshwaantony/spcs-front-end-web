@@ -11,9 +11,14 @@ import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [storeOpen, setStoreOpen] = useState(false);
   const [salesOpen, setSalesOpen] = useState(false);
   const [programsOpen, setProgramsOpen] = useState(false);
   const pathname = usePathname();
+  const isStoreActive =
+    pathname === "/book-store" ||
+    pathname === "/e-book" ||
+    pathname === "/audio-book";
 
   return (
     <>
@@ -61,11 +66,41 @@ export default function Navbar() {
                 href="/aksharam-museum"
                 pathname={pathname}
               />
-              <NavItem
-                text="Book Store"
-                href="/book-store"
-                pathname={pathname}
-              />
+              <div className="relative group">
+                <button
+                  className={`flex items-center gap-1 text-sm transition ${
+                    isStoreActive
+                      ? "font-bold text-[#1193d4]"
+                      : "font-medium text-slate-600 hover:text-[#1193d4]"
+                  }`}
+                >
+                  Book Store
+                  <span className="material-symbols-outlined text-[18px]">
+                    expand_more
+                  </span>
+                </button>
+
+                <div className="invisible absolute left-0 top-full mt-3 w-64 rounded-xl border border-slate-100 bg-white opacity-0 shadow-lg transition-all group-hover:visible group-hover:opacity-100">
+                  <DropdownItem
+                    text="All Books"
+                    href="/book-store"
+                    pathname={pathname}
+                    description="Browse the full catalog"
+                  />
+                  <DropdownItem
+                    text="E-Books"
+                    href="/e-book"
+                    pathname={pathname}
+                    description="Digital-first reading picks"
+                  />
+                  <DropdownItem
+                    text="Audiobooks"
+                    href="/audio-book"
+                    pathname={pathname}
+                    description="Listen-ready story collection"
+                  />
+                </div>
+              </div>
               <NavItem
                 text="Gift Card"
                 href="/gift-card"
@@ -213,12 +248,46 @@ export default function Navbar() {
             pathname={pathname}
             onClick={() => setOpen(false)}
           />
-          <DrawerItem
-            text="Book Store"
-            href="/book-store"
-            pathname={pathname}
-            onClick={() => setOpen(false)}
-          />
+          <button
+            onClick={() => {
+              setStoreOpen(!storeOpen);
+              setSalesOpen(false);
+              setProgramsOpen(false);
+            }}
+            className={`flex justify-between text-base ${
+              isStoreActive
+                ? "font-bold text-[#1193d4]"
+                : "font-medium text-slate-700"
+            }`}
+          >
+            Book Store
+            <span className="material-symbols-outlined">
+              {storeOpen ? "expand_less" : "expand_more"}
+            </span>
+          </button>
+
+          {storeOpen && (
+            <div className="ml-4 flex flex-col gap-3">
+              <DrawerItem
+                text="All Books"
+                href="/book-store"
+                pathname={pathname}
+                onClick={() => setOpen(false)}
+              />
+              <DrawerItem
+                text="E-Books"
+                href="/e-book"
+                pathname={pathname}
+                onClick={() => setOpen(false)}
+              />
+              <DrawerItem
+                text="Audiobooks"
+                href="/audio-book"
+                pathname={pathname}
+                onClick={() => setOpen(false)}
+              />
+            </div>
+          )}
           <DrawerItem
             text="Gift Card"
             href="/gift-card"
@@ -343,7 +412,7 @@ const NavItem = ({ text, href, pathname }) => {
   );
 };
 
-const DropdownItem = ({ text, href, pathname }) => {
+const DropdownItem = ({ text, href, pathname, description }) => {
   const isActive = pathname === href;
 
   return (
@@ -355,7 +424,12 @@ const DropdownItem = ({ text, href, pathname }) => {
           : "text-slate-700 hover:bg-slate-50"
       }`}
     >
-      {text}
+      <span className="block">{text}</span>
+      {description ? (
+        <span className="mt-1 block text-xs font-medium text-slate-400">
+          {description}
+        </span>
+      ) : null}
     </Link>
   );
 };

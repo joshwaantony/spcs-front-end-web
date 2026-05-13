@@ -3,84 +3,262 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HiX } from "react-icons/hi";
 import { useBooksStore } from "@/store/admin/books/books.store";
-import { normalizeBook } from "@/store/admin/books/books.store";
 import { useCategoryStore } from "@/store/admin/books/category.store";
 import { useToastStore } from "@/store/ui/toast.store";
 import { getBookById } from "@/services/admin/books/books.api";
+import {
+  ASSET_TYPES,
+  formatFileSize,
+  validateAssetFile,
+} from "@/services/admin/media/media.constants";
+import { useMediaUpload } from "@/hooks/useMediaUpload";
 
-const inputClassName =
-  "h-12 w-full rounded-[16px] border border-[#dfe7d5] bg-white px-4 text-sm font-semibold text-[#141810] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
+const BOOK_STATUS_OPTIONS = [
+  "DRAFT",
+  "PUBLISHED",
+  "ARCHIVED",
+  "OUT_OF_STOCK",
+  "DISCONTINUED",
+];
 
-const textareaClassName =
-  "w-full rounded-[20px] border border-[#dfe7d5] bg-white px-4 py-4 text-sm font-medium text-[#141810] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
+const FORMAT_OPTIONS = [
+  {
+    type: "PAPERBACK",
+    label: "Paperback",
+    description: "Physical format with price, stock, SKU, and ISBN.",
+  },
+  {
+    type: "HARDCOVER",
+    label: "Hardcover",
+    description: "Premium physical format with stock tracking.",
+  },
+  {
+    type: "EBOOK",
+    label: "Ebook",
+    description: "Digital edition with protected file upload.",
+  },
+  {
+    type: "AUDIO",
+    label: "Audiobook",
+    description: "Audio edition with file upload and DRM toggle.",
+  },
+];
 
-const selectClassName =
-  "h-12 w-full appearance-none rounded-[16px] border border-[#dfe7d5] bg-white px-4 text-sm font-semibold text-[#141810] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
-
-const getLinkedId = (value) => {
-  if (!value) {
-    return "";
-  }
-
-  if (typeof value === "string") {
-    return value;
-  }
-
-  return value.id || value.category_id || value.discount_id || "";
-};
-
-const buildForm = (book) => ({
-  title: book?.title || book?.name || "",
-  authorName: book?.authorName || book?.author || "",
-  category: getLinkedId(book?.category) || book?.category_id || "",
-  type: book?.type || "PAPERBACK",
-  price: String(book?.price || ""),
-  titleMl: book?.titleMl || book?.malayalam_name || "",
-  authorNameMl: book?.authorNameMl || book?.author_malayalam || "",
-  isBestsellerManual: Boolean(book?.isBestsellerManual ?? book?.best_seller),
-  description: book?.description || "",
-  edition: book?.edition || "",
-  isbn: book?.isbn || "",
-  pages: String((book?.pages ?? book?.num_of_pages) || ""),
-  publisherId: book?.publisherId || "",
-  languageCode: book?.languageCode || book?.language || "",
-  discountAmount: String(book?.discountAmount || "0"),
-  sku: book?.sku || "",
-  status: book?.status || "DRAFT",
-  isAwardWinner: Boolean(book?.isAwardWinner ?? book?.award_winner),
-  isNewArrival: Boolean(book?.isNewArrival ?? book?.new_arrival),
-  isPrePublication: Boolean(
-    book?.isPrePublication ?? book?.republication
-  ),
-  isFeatured: Boolean(book?.isFeatured ?? book?.highlight),
-  rankOrder: String((book?.rankOrder ?? book?.rank) || ""),
-  unlimited_stock: Boolean(book?.unlimited_stock),
-  stock: String(book?.stock ?? ""),
-  formatId: book?.formatId || "",
-  formatMediaId: book?.formatMediaId || "",
-  formatIsActive: Boolean(book?.formatIsActive ?? true),
-  formatIsDigitalEnabled: Boolean(book?.formatIsDigitalEnabled),
-  formatDrmEnabled: Boolean(book?.formatDrmEnabled ?? true),
-  coverMediaId: book?.coverMediaId || "",
-  cover_image: null,
-  preview: book?.cover_image_url || "",
-});
-
-const toggleFields = [
+const FLAG_OPTIONS = [
+  { key: "isFeatured", label: "Featured" },
   { key: "isBestsellerManual", label: "Best Seller" },
   { key: "isAwardWinner", label: "Award Winner" },
   { key: "isNewArrival", label: "New Arrival" },
   { key: "isPrePublication", label: "Pre Publication" },
-  { key: "isFeatured", label: "Featured" },
-  { key: "unlimited_stock", label: "Unlimited Stock" },
 ];
+
+const FORMAT_SKU_CODES = {
+  PAPERBACK: "PB",
+  HARDCOVER: "HC",
+  EBOOK: "EB",
+  AUDIO: "AU",
+  AUDIO_BOOK: "AU",
+};
+
+const inputClassName =
+  "h-14 w-full rounded-[18px] border border-[#dfe7d5] bg-white px-4 text-sm font-semibold text-[#141810] placeholder:text-[#a1a8a0] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
+
+const selectClassName =
+  "h-14 w-full appearance-none rounded-[18px] border border-[#dfe7d5] bg-white px-4 text-sm font-semibold text-[#141810] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
+
+const textAreaClassName =
+  "w-full rounded-[24px] border border-[#dfe7d5] bg-white px-4 py-4 text-sm font-medium text-[#141810] placeholder:text-[#a1a8a0] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
+
+const isDigitalFormat = (type) => type === "EBOOK" || type === "AUDIO";
+
+const generateSku = (title, type) => {
+  const cleanTitle = (title || "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 12) || "BOOK";
+
+  return `${cleanTitle}-${FORMAT_SKU_CODES[type] ?? "GEN"}-${Date.now()
+    .toString()
+    .slice(-4)}`;
+};
+
+const parseOptionalNumber = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const parseRequiredNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const getFormatLabel = (type) =>
+  FORMAT_OPTIONS.find((option) => option.type === type)?.label || type;
+
+const getAssetTypeForFormat = (type) => {
+  if (type === "EBOOK") {
+    return ASSET_TYPES.EBOOK_FILE;
+  }
+
+  if (type === "AUDIO") {
+    return ASSET_TYPES.AUDIO_BOOK_FILE;
+  }
+
+  return null;
+};
+
+const getAcceptForFormat = (type) => {
+  if (type === "EBOOK") {
+    return ".pdf,.epub,application/pdf,application/epub+zip";
+  }
+
+  if (type === "AUDIO") {
+    return ".mp3,.m4a,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav";
+  }
+
+  return "";
+};
+
+const getFormatUploadHelp = (type) => {
+  if (type === "EBOOK") {
+    return "PDF or EPUB. Upload a replacement file only if this edition changes.";
+  }
+
+  if (type === "AUDIO") {
+    return "MP3, M4A, or WAV. Upload a replacement file only if needed.";
+  }
+
+  return "";
+};
+
+const createEmptyFormat = (type = "PAPERBACK", title = "") => {
+  const digital = isDigitalFormat(type);
+  const sku = digital ? "" : generateSku(title, type);
+
+  return {
+    localId: crypto.randomUUID(),
+    id: "",
+    type,
+    price: "",
+    discountAmount: "0",
+    sku,
+    skuAutoGenerated: !digital,
+    isbn: "",
+    stockCount: "0",
+    drmEnabled: type === "EBOOK",
+    mediaId: "",
+    isActive: true,
+    isDigitalEnabled: digital,
+    uploadFile: null,
+    uploadName: "",
+    uploadStatus: "idle",
+    uploadError: "",
+  };
+};
+
+const getPreviewPrice = (formats) => {
+  const pricedFormat = formats.find((format) => Number(format.price) > 0) || formats[0];
+
+  return pricedFormat?.price || "";
+};
+
+const getMediaUrl = (media) =>
+  media?.url || media?.secureUrl || media?.fileUrl || media?.path || media?.src || "";
+
+const mapFormatType = (type) => {
+  if (type === "AUDIO_BOOK" || type === "AUDIOBOOK") {
+    return "AUDIO";
+  }
+
+  if (type === "HARD_COPY") {
+    return "PAPERBACK";
+  }
+
+  return type || "PAPERBACK";
+};
+
+const buildFormatForm = (format) => {
+  const normalizedType = mapFormatType(format?.type);
+  const digital = isDigitalFormat(normalizedType);
+  const mediaId = format?.mediaId || "";
+  const sku = format?.sku || "";
+
+  return {
+    localId: format?.id || crypto.randomUUID(),
+    id: format?.id || "",
+    type: normalizedType,
+    price: String(format?.price ?? ""),
+    discountAmount: String(format?.discountAmount ?? 0),
+    sku: sku || (digital ? "" : generateSku(format?.title || format?.name, normalizedType)),
+    skuAutoGenerated: !digital && !sku,
+    isbn: format?.isbn || "",
+    stockCount: String(format?.stockCount ?? 0),
+    drmEnabled: Boolean(format?.drmEnabled ?? (normalizedType === "EBOOK")),
+    mediaId,
+    isActive: Boolean(format?.isActive ?? true),
+    isDigitalEnabled: Boolean(format?.isDigitalEnabled ?? digital),
+    uploadFile: null,
+    uploadName: "",
+    uploadStatus: digital && mediaId ? "uploaded" : "idle",
+    uploadError: "",
+  };
+};
+
+const buildForm = (book) => {
+  const categoryIds = Array.isArray(book?.categories)
+    ? book.categories
+        .map((item) => item?.categoryId || item?.category?.id || item?.id)
+        .filter(Boolean)
+    : [];
+  const formats = Array.isArray(book?.formats) && book.formats.length > 0
+    ? book.formats.map(buildFormatForm)
+    : [buildFormatForm(book)];
+  const coverPreviewUrl =
+    book?.cover_image_url ||
+    book?.image ||
+    getMediaUrl(book?.coverMedia) ||
+    getMediaUrl(book?.media) ||
+    "";
+
+  return {
+    id: book?.id || book?.book_id || "",
+    title: book?.title || book?.name || "",
+    titleMl: book?.titleMl || book?.malayalam_name || "",
+    authorName: book?.authorName || book?.author || "",
+    authorNameMl: book?.authorNameMl || book?.author_malayalam || "",
+    description: book?.description || "",
+    edition: book?.edition || "",
+    pages: String(book?.pages ?? book?.num_of_pages ?? ""),
+    languageCode: book?.languageCode || book?.language || "",
+    status: book?.status || "DRAFT",
+    rankOrder: String(book?.rankOrder ?? book?.rank ?? 0),
+    isFeatured: Boolean(book?.isFeatured ?? book?.highlight),
+    isBestsellerManual: Boolean(book?.isBestsellerManual ?? book?.best_seller),
+    isAwardWinner: Boolean(book?.isAwardWinner ?? book?.award_winner),
+    isNewArrival: Boolean(book?.isNewArrival ?? book?.new_arrival),
+    isPrePublication: Boolean(book?.isPrePublication ?? book?.republication),
+    categoryIds,
+    coverFile: null,
+    coverPreviewUrl,
+    coverMediaId: book?.coverMediaId || "",
+    coverUploadStatus: book?.coverMediaId ? "uploaded" : "idle",
+    coverUploadError: "",
+    formats,
+  };
+};
 
 export default function BookEditModal({ isOpen, book, onClose }) {
   const [form, setForm] = useState(() => buildForm(book));
   const [successMessage, setSuccessMessage] = useState("");
   const [loadingBook, setLoadingBook] = useState(false);
-  const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
+  const formatInputRefs = useRef({});
   const showToast = useToastStore((state) => state.showToast);
+  const { uploadMedia, isUploading } = useMediaUpload();
   const {
     page,
     limit,
@@ -97,18 +275,19 @@ export default function BookEditModal({ isOpen, book, onClose }) {
   const { categories, fetchCategories, loading: categoryLoading } =
     useCategoryStore();
 
+  const selectedCategories = useMemo(
+    () =>
+      categories.filter((category) =>
+        form.categoryIds.includes(category.id || category.category_id)
+      ),
+    [categories, form.categoryIds]
+  );
   const enabledFlags = useMemo(
-    () => toggleFields.filter(({ key }) => form[key]),
+    () => FLAG_OPTIONS.filter(({ key }) => form[key]),
     [form]
   );
-  const hasSelectedCategoryOption = useMemo(
-    () =>
-      categories.some(
-        (category) =>
-          (category.id || category.category_id) === form.category
-      ),
-    [categories, form.category]
-  );
+  const isSubmitting = updating || loadingBook || isUploading;
+  const previewPrice = getPreviewPrice(form.formats);
 
   useEffect(() => {
     if (!isOpen || !book) {
@@ -131,7 +310,7 @@ export default function BookEditModal({ isOpen, book, onClose }) {
           return;
         }
 
-        const detailedBook = normalizeBook(res?.data || res);
+        const detailedBook = res?.data || res;
         setForm(buildForm(detailedBook || book));
       } catch (error) {
         if (!cancelled) {
@@ -152,7 +331,7 @@ export default function BookEditModal({ isOpen, book, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [isOpen, book, resetUpdateBookState, fetchCategories, showToast]);
+  }, [isOpen, book, fetchCategories, resetUpdateBookState, showToast]);
 
   useEffect(() => {
     if (!updateError) {
@@ -166,8 +345,29 @@ export default function BookEditModal({ isOpen, book, onClose }) {
     return null;
   }
 
+  const patchForm = (patch) => {
+    setForm((current) => ({
+      ...current,
+      ...patch,
+    }));
+  };
+
+  const patchFormat = (localId, patch) => {
+    setForm((current) => ({
+      ...current,
+      formats: current.formats.map((format) =>
+        format.localId === localId
+          ? {
+              ...format,
+              ...patch,
+            }
+          : format
+      ),
+    }));
+  };
+
   const handleClose = () => {
-    if (updating || loadingBook) {
+    if (isSubmitting) {
       return;
     }
 
@@ -176,93 +376,377 @@ export default function BookEditModal({ isOpen, book, onClose }) {
     onClose();
   };
 
-  const handleChange = (event) => {
+  const handleInputChange = (event) => {
     const { name, value, type, checked } = event.target;
 
-    setForm((current) => ({
-      ...current,
-      [name]: type === "checkbox" ? checked : value,
-      ...(name === "unlimited_stock" && checked ? { stock: "0" } : {}),
-      ...(name === "preview" ? { preview: value } : {}),
-    }));
+    const nextValue = type === "checkbox" ? checked : value;
+
+    if (name === "title") {
+      setForm((current) => ({
+        ...current,
+        title: nextValue,
+        formats: current.formats.map((format) => {
+          if (isDigitalFormat(format.type) || !format.skuAutoGenerated) {
+            return format;
+          }
+
+          return {
+            ...format,
+            sku: generateSku(nextValue, format.type),
+          };
+        }),
+      }));
+      return;
+    }
+
+    patchForm({
+      [name]: nextValue,
+    });
   };
 
-  const handleImageUpload = (event) => {
+  const handleCategoryToggle = (categoryId) => {
+    setForm((current) => {
+      const nextCategoryIds = current.categoryIds.includes(categoryId)
+        ? current.categoryIds.filter((id) => id !== categoryId)
+        : [...current.categoryIds, categoryId];
+
+      return {
+        ...current,
+        categoryIds: nextCategoryIds,
+      };
+    });
+  };
+
+  const handleCoverSelect = (event) => {
     const file = event.target.files?.[0];
 
     if (!file) {
       return;
     }
 
+    try {
+      validateAssetFile({
+        file,
+        assetType: ASSET_TYPES.BOOK_COVER,
+      });
+    } catch (error) {
+      event.target.value = "";
+      showToast({
+        type: "error",
+        message: error?.message || "Invalid cover image.",
+      });
+      return;
+    }
+
     const reader = new FileReader();
 
     reader.onload = () => {
-      setForm((current) => ({
-        ...current,
-        cover_image: file,
-        preview:
-          typeof reader.result === "string" ? reader.result : current.preview,
-      }));
+      patchForm({
+        coverFile: file,
+        coverPreviewUrl:
+          typeof reader.result === "string" ? reader.result : "",
+        coverMediaId: "",
+        coverUploadStatus: "selected",
+        coverUploadError: "",
+      });
     };
 
     reader.readAsDataURL(file);
   };
 
+  const uploadCoverIfNeeded = async () => {
+    if (!form.coverFile || form.coverMediaId) {
+      return form.coverMediaId;
+    }
+
+    patchForm({
+      coverUploadStatus: "uploading",
+      coverUploadError: "",
+    });
+
+    try {
+      const uploadedCover = await uploadMedia({
+        file: form.coverFile,
+        assetType: ASSET_TYPES.BOOK_COVER,
+        entityId: form.id,
+        altText: form.title.trim() || undefined,
+      });
+
+      patchForm({
+        coverMediaId: uploadedCover.mediaId,
+        coverUploadStatus: "uploaded",
+        coverUploadError: "",
+      });
+
+      return uploadedCover.mediaId;
+    } catch (error) {
+      patchForm({
+        coverUploadStatus: "error",
+        coverUploadError: error?.message || "Cover upload failed.",
+      });
+      throw error;
+    }
+  };
+
+  const handleCoverUpload = async () => {
+    try {
+      await uploadCoverIfNeeded();
+      showToast({
+        type: "success",
+        message: "Cover uploaded successfully.",
+      });
+    } catch (error) {
+      showToast({
+        type: "error",
+        message: error?.message || "Failed to upload cover.",
+      });
+    }
+  };
+
+  const addFormat = (type) => {
+    setForm((current) => ({
+      ...current,
+      formats: [...current.formats, createEmptyFormat(type, current.title)],
+    }));
+  };
+
+  const removeFormat = (localId) => {
+    setForm((current) => ({
+      ...current,
+      formats:
+        current.formats.length === 1
+          ? current.formats
+          : current.formats.filter((format) => format.localId !== localId),
+    }));
+  };
+
+  const handleFormatChange = (localId, field, value) => {
+    if (field === "type") {
+      const digital = isDigitalFormat(value);
+
+      patchFormat(localId, {
+        type: value,
+        sku: digital ? "" : generateSku(form.title, value),
+        skuAutoGenerated: !digital,
+        isbn: digital ? "" : "",
+        stockCount: digital ? "0" : "0",
+        drmEnabled: value === "EBOOK",
+        mediaId: digital ? "" : "",
+        isDigitalEnabled: digital,
+        uploadFile: null,
+        uploadName: "",
+        uploadStatus: "idle",
+        uploadError: "",
+      });
+      return;
+    }
+
+    if (field === "sku") {
+      patchFormat(localId, {
+        sku: value,
+        skuAutoGenerated: false,
+      });
+      return;
+    }
+
+    patchFormat(localId, {
+      [field]: value,
+    });
+  };
+
+  const handleFormatFileSelect = (localId, file) => {
+    const format = form.formats.find((item) => item.localId === localId);
+
+    if (!file || !format) {
+      return;
+    }
+
+    const assetType = getAssetTypeForFormat(format.type);
+
+    try {
+      validateAssetFile({
+        file,
+        assetType,
+      });
+    } catch (error) {
+      patchFormat(localId, {
+        uploadFile: null,
+        uploadName: "",
+        mediaId: "",
+        uploadStatus: "error",
+        uploadError: error?.message || "Invalid file.",
+      });
+      showToast({
+        type: "error",
+        message: error?.message || "Invalid file.",
+      });
+      return;
+    }
+
+    patchFormat(localId, {
+      uploadFile: file,
+      uploadName: file.name,
+      mediaId: "",
+      uploadStatus: "selected",
+      uploadError: "",
+    });
+  };
+
+  const uploadFormatMediaIfNeeded = async (format) => {
+    if (!isDigitalFormat(format.type) || !format.uploadFile || format.mediaId) {
+      return format.mediaId;
+    }
+
+    patchFormat(format.localId, {
+      uploadStatus: "uploading",
+      uploadError: "",
+    });
+
+    try {
+      const uploadedMedia = await uploadMedia({
+        file: format.uploadFile,
+        assetType: getAssetTypeForFormat(format.type),
+        entityId: form.id,
+        subEntityId: format.id || format.localId,
+        altText: form.title.trim() || undefined,
+      });
+
+      patchFormat(format.localId, {
+        mediaId: uploadedMedia.mediaId,
+        uploadStatus: "uploaded",
+        uploadError: "",
+      });
+
+      return uploadedMedia.mediaId;
+    } catch (error) {
+      patchFormat(format.localId, {
+        uploadStatus: "error",
+        uploadError: error?.message || "Format upload failed.",
+      });
+      throw error;
+    }
+  };
+
+  const handleFormatUpload = async (localId) => {
+    const format = form.formats.find((item) => item.localId === localId);
+
+    if (!format?.uploadFile) {
+      showToast({
+        type: "error",
+        message: "Please choose a file first.",
+      });
+      return;
+    }
+
+    try {
+      await uploadFormatMediaIfNeeded(format);
+      showToast({
+        type: "success",
+        message: `${getFormatLabel(format.type)} file uploaded successfully.`,
+      });
+    } catch (error) {
+      showToast({
+        type: "error",
+        message: error?.message || "Failed to upload file.",
+      });
+    }
+  };
+
+  const validateBeforeSubmit = () => {
+    if (!form.title.trim()) {
+      throw new Error("Book title is required.");
+    }
+
+    if (form.categoryIds.length === 0) {
+      throw new Error("Select at least one category.");
+    }
+
+    if (form.coverFile && !form.coverMediaId) {
+      throw new Error("Upload and confirm the cover before saving.");
+    }
+
+    const hasPendingDigitalUpload = form.formats.some(
+      (format) => isDigitalFormat(format.type) && format.uploadFile && !format.mediaId
+    );
+
+    if (hasPendingDigitalUpload) {
+      throw new Error("Upload and confirm all digital format files before saving.");
+    }
+
+    const hasPublishedDigitalWithoutMedia = form.formats.some(
+      (format) =>
+        isDigitalFormat(format.type) &&
+        form.status === "PUBLISHED" &&
+        !format.mediaId
+    );
+
+    if (hasPublishedDigitalWithoutMedia) {
+      throw new Error("Published digital formats require an uploaded file.");
+    }
+  };
+
+  const buildFormatPayload = (format) => {
+    const digital = isDigitalFormat(format.type);
+
+    if (digital) {
+      return {
+        id: format.id || undefined,
+        type: format.type,
+        price: parseRequiredNumber(format.price),
+        discountAmount: parseRequiredNumber(format.discountAmount),
+        mediaId: format.mediaId || undefined,
+        hasUnlimitedStock: true,
+        stockCount: 0,
+        isDigitalEnabled: true,
+        drmEnabled: Boolean(format.drmEnabled),
+        isActive: format.isActive,
+      };
+    }
+
+    return {
+      id: format.id || undefined,
+      type: format.type,
+      price: parseRequiredNumber(format.price),
+      discountAmount: parseRequiredNumber(format.discountAmount),
+      sku: format.sku.trim() || undefined,
+      isbn: format.isbn.trim() || undefined,
+      hasUnlimitedStock: false,
+      stockCount: parseRequiredNumber(format.stockCount),
+      isDigitalEnabled: false,
+      drmEnabled: false,
+      isActive: format.isActive,
+    };
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSuccessMessage("");
-    const normalizedPrice = Number(form.price);
-    const normalizedPages = Number(form.pages);
-    const normalizedRank =
-      form.rankOrder.trim() === "" ? 0 : Number(form.rankOrder);
-    const normalizedStock = form.unlimited_stock
-      ? 0
-      : Number(form.stock);
-    const normalizedDiscountAmount = Number(form.discountAmount);
-
-    const payload = {
-      title: form.title.trim(),
-      titleMl: form.titleMl.trim(),
-      authorName: form.authorName.trim() || null,
-      authorNameMl: form.authorNameMl.trim() || null,
-      description: form.description.trim(),
-      edition: form.edition.trim(),
-      pages: Number.isFinite(normalizedPages) ? normalizedPages : undefined,
-      languageCode: form.languageCode.trim() || undefined,
-      status: form.status,
-      rankOrder: Number.isFinite(normalizedRank) ? normalizedRank : 0,
-      isBestsellerManual: form.isBestsellerManual,
-      isFeatured: form.isFeatured,
-      isAwardWinner: form.isAwardWinner,
-      isNewArrival: form.isNewArrival,
-      isPrePublication: form.isPrePublication,
-      publisherId: form.publisherId.trim() || null,
-      coverMediaId: form.coverMediaId.trim() || null,
-      categoryIds: form.category.trim() ? [form.category.trim()] : [],
-      formats: [
-        {
-          id: form.formatId || undefined,
-          type: form.type,
-          price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
-          discountAmount: Number.isFinite(normalizedDiscountAmount)
-            ? normalizedDiscountAmount
-            : 0,
-          sku: form.sku.trim() || undefined,
-          isbn: form.isbn.trim() || undefined,
-          hasUnlimitedStock: form.unlimited_stock,
-          stockCount: Number.isFinite(normalizedStock) ? normalizedStock : 0,
-          mediaId: form.formatMediaId || undefined,
-          isDigitalEnabled:
-            form.type === "EBOOK" ? true : form.formatIsDigitalEnabled,
-          drmEnabled:
-            form.type === "EBOOK" ? true : form.formatDrmEnabled,
-          isActive: form.formatIsActive,
-        },
-      ],
-    };
 
     try {
-      await updateBook(book.id || book.book_id, payload);
+      validateBeforeSubmit();
+
+      const payload = {
+        title: form.title.trim(),
+        titleMl: form.titleMl.trim() || undefined,
+        authorName: form.authorName.trim() || undefined,
+        authorNameMl: form.authorNameMl.trim() || undefined,
+        description: form.description.trim() || undefined,
+        edition: form.edition.trim() || undefined,
+        pages: parseOptionalNumber(form.pages),
+        languageCode: form.languageCode.trim() || undefined,
+        status: form.status,
+        rankOrder: parseRequiredNumber(form.rankOrder, 0),
+        isFeatured: form.isFeatured,
+        isBestsellerManual: form.isBestsellerManual,
+        isAwardWinner: form.isAwardWinner,
+        isNewArrival: form.isNewArrival,
+        isPrePublication: form.isPrePublication,
+        coverMediaId: form.coverMediaId || undefined,
+        categoryIds: form.categoryIds,
+        formats: form.formats.map((format) => buildFormatPayload(format)),
+      };
+
+      await updateBook(form.id, payload);
       await fetchBooks({
         filter,
         page,
@@ -271,15 +755,22 @@ export default function BookEditModal({ isOpen, book, onClose }) {
         fromDate,
         toDate,
       });
+
       setSuccessMessage("Book updated successfully.");
-      showToast({ type: "success", message: "Book updated successfully." });
+      showToast({
+        type: "success",
+        message: "Book updated successfully.",
+      });
 
       window.setTimeout(() => {
         resetUpdateBookState();
         onClose();
       }, 900);
     } catch (error) {
-      console.error("Update book failed:", error);
+      showToast({
+        type: "error",
+        message: error?.message || "Failed to update book.",
+      });
     }
   };
 
@@ -292,207 +783,541 @@ export default function BookEditModal({ isOpen, book, onClose }) {
 
       <div className="fixed inset-0 z-[70] overflow-y-auto p-4 md:p-6">
         <div className="flex min-h-full items-center justify-center">
-          <div className="w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/70 bg-[#f6faf1] shadow-[0_40px_120px_-40px_rgba(20,24,16,0.45)]">
+          <div className="w-full max-w-[1380px] overflow-hidden rounded-[34px] border border-white/70 bg-[#f5faef] shadow-[0_40px_120px_-40px_rgba(20,24,16,0.48)]">
             <div className="flex items-center justify-between border-b border-[#e4ebda] bg-white/90 px-6 py-5 sm:px-8">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#7b8a63]">
-                  Card Edit Popup
+                <p className="text-[11px] font-bold uppercase tracking-[0.26em] text-[#7b8a63]">
+                  Product Publishing Flow
                 </p>
-                <h2 className="mt-1 text-2xl font-black text-[#141810]">
+                <h2 className="mt-1 text-2xl font-black tracking-tight text-[#141810]">
                   Edit Book
                 </h2>
+                <p className="mt-2 text-sm font-medium text-[#6b7280]">
+                  Update core metadata, replace media when needed, and keep every
+                  format aligned with the latest backend rules.
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#edf1e8] bg-white text-[#6B7280]"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-[#edf1e8] bg-white text-[#6b7280] transition hover:text-[#141810]"
                 aria-label="Close"
               >
                 <HiX size={20} />
               </button>
             </div>
 
-            <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid xl:grid-cols-[1.35fr_0.65fr]">
               <div className="border-b border-[#e4ebda] p-6 sm:p-8 xl:border-b-0 xl:border-r">
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   {loadingBook ? (
-                    <div className="rounded-2xl border border-[#dfe7d5] bg-white px-4 py-3 text-sm font-medium text-[#6B7280]">
+                    <div className="rounded-2xl border border-[#dfe7d5] bg-white px-4 py-3 text-sm font-medium text-[#6b7280]">
                       Loading latest book details...
                     </div>
                   ) : null}
 
-                  <div>
-                    <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] text-[#6B7280]">
-                      Replace Cover
-                    </label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/jpg,image/webp"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex w-full items-center justify-center gap-3 rounded-[24px] border-2 border-dashed border-[#d9e6c7] bg-[#fbfdf7] px-6 py-6 text-center transition hover:border-[#46EC12] hover:bg-[#f6fde9]"
-                    >
-                      <span className="material-symbols-outlined rounded-full bg-white p-3 text-[#7b8a63] shadow-sm">
-                        cloud_upload
-                      </span>
-                      <span className="text-left">
-                        <span className="block text-sm font-bold text-[#141810]">
-                          Upload new cover image
-                        </span>
-                        <span className="mt-1 block text-xs text-[#6B7280]">
-                          PNG, JPG, or WEBP
-                        </span>
-                      </span>
-                    </button>
-                  </div>
+                  <SectionCard
+                    eyebrow="Basic Info"
+                    title="Core book details"
+                    description="Refine title, author, language, and editorial metadata."
+                  >
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field label="Book Name" required>
+                        <input
+                          name="title"
+                          value={form.title}
+                          onChange={handleInputChange}
+                          className={inputClassName}
+                          required
+                        />
+                      </Field>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field label="Book Name">
-                      <input name="title" value={form.title} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Author">
-                      <input name="authorName" value={form.authorName} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Malayalam Name">
-                      <input name="titleMl" value={form.titleMl} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Author in Malayalam">
-                      <input name="authorNameMl" value={form.authorNameMl} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Category ID">
-                      <select
-                        name="category"
-                        value={form.category}
-                        onChange={handleChange}
-                        className={selectClassName}
-                        required
-                      >
-                        <option value="">
-                          {categoryLoading
-                            ? "Loading categories..."
-                            : "Select category"}
-                        </option>
-                        {categories.map((category) => (
-                          <option
-                            key={category.id || category.category_id}
-                            value={category.id || category.category_id}
-                          >
-                            {category.name}
-                          </option>
-                        ))}
-                        {form.category && !hasSelectedCategoryOption ? (
-                          <option value={form.category}>
-                            Current category ({form.category})
-                          </option>
-                        ) : null}
-                      </select>
-                    </Field>
-                    <Field label="Book Type">
-                      <select name="type" value={form.type} onChange={handleChange} className={selectClassName}>
-                        <option value="PAPERBACK">Paperback</option>
-                        <option value="HARDCOVER">Hardcover</option>
-                        <option value="EBOOK">Ebook</option>
-                        <option value="AUDIO">Audiobook</option>
-                      </select>
-                    </Field>
-                    <Field label="Price">
-                      <input type="number" name="price" value={form.price} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Edition">
-                      <input name="edition" value={form.edition} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="ISBN">
-                      <input name="isbn" value={form.isbn} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Pages">
-                      <input type="number" name="pages" value={form.pages} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Publisher ID">
-                      <input name="publisherId" value={form.publisherId} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Language">
-                      <input name="languageCode" value={form.languageCode} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Discount Amount">
-                      <input name="discountAmount" value={form.discountAmount} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Status">
-                      <select
-                        name="status"
-                        value={form.status}
-                        onChange={handleChange}
-                        className={selectClassName}
-                      >
-                        <option value="DRAFT">Draft</option>
-                        <option value="PUBLISHED">Published</option>
-                        <option value="ARCHIVED">Archived</option>
-                        <option value="OUT_OF_STOCK">Out of Stock</option>
-                        <option value="DISCONTINUED">Discontinued</option>
-                      </select>
-                    </Field>
-                    <Field label="Rank">
-                      <input type="number" name="rankOrder" value={form.rankOrder} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Stock">
-                      <input
-                        type="number"
-                        name="stock"
-                        value={form.stock}
-                        onChange={handleChange}
-                        disabled={form.unlimited_stock}
-                        className={`${inputClassName} disabled:cursor-not-allowed disabled:bg-[#f2f5ee]`}
+                      <Field label="Author">
+                        <input
+                          name="authorName"
+                          value={form.authorName}
+                          onChange={handleInputChange}
+                          className={inputClassName}
+                        />
+                      </Field>
+
+                      <Field label="Malayalam Name">
+                        <input
+                          name="titleMl"
+                          value={form.titleMl}
+                          onChange={handleInputChange}
+                          className={inputClassName}
+                        />
+                      </Field>
+
+                      <Field label="Author in Malayalam">
+                        <input
+                          name="authorNameMl"
+                          value={form.authorNameMl}
+                          onChange={handleInputChange}
+                          className={inputClassName}
+                        />
+                      </Field>
+                    </div>
+
+                    <Field label="Description">
+                      <textarea
+                        name="description"
+                        rows={4}
+                        value={form.description}
+                        onChange={handleInputChange}
+                        className={textAreaClassName}
                       />
                     </Field>
-                    <Field label="SKU">
-                      <input name="sku" value={form.sku} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Cover Media ID">
-                      <input name="coverMediaId" value={form.coverMediaId} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                    <Field label="Cover Preview URL">
-                      <input name="preview" value={form.preview} onChange={handleChange} className={inputClassName} />
-                    </Field>
-                  </div>
 
-                  <Field label="Description">
-                    <textarea
-                      name="description"
-                      rows={4}
-                      value={form.description}
-                      onChange={handleChange}
-                      className={textareaClassName}
-                    />
-                  </Field>
-
-                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    {toggleFields.map(({ key, label }) => (
-                      <label
-                        key={key}
-                        className={`flex cursor-pointer items-center justify-between rounded-[18px] border px-4 py-4 transition ${
-                          form[key]
-                            ? "border-[#cfe4b2] bg-[#f5fbe9]"
-                            : "border-[#e8ede3] bg-[#fbfcf9]"
-                        }`}
-                      >
-                        <span className="text-sm font-bold text-[#141810]">
-                          {label}
-                        </span>
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <Field label="Language">
                         <input
-                          type="checkbox"
-                          name={key}
-                          checked={form[key]}
-                          onChange={handleChange}
-                          className="h-5 w-5 rounded border-[#c9d7b6] text-[#46EC12] focus:ring-[#46EC12]/30"
+                          name="languageCode"
+                          value={form.languageCode}
+                          onChange={handleInputChange}
+                          className={inputClassName}
                         />
-                      </label>
-                    ))}
-                  </div>
+                      </Field>
+
+                      <Field label="Status">
+                        <select
+                          name="status"
+                          value={form.status}
+                          onChange={handleInputChange}
+                          className={selectClassName}
+                        >
+                          {BOOK_STATUS_OPTIONS.map((status) => (
+                            <option key={status} value={status}>
+                              {status}
+                            </option>
+                          ))}
+                        </select>
+                      </Field>
+
+                      <Field label="Edition">
+                        <input
+                          name="edition"
+                          value={form.edition}
+                          onChange={handleInputChange}
+                          className={inputClassName}
+                        />
+                      </Field>
+
+                      <Field label="Pages">
+                        <input
+                          type="number"
+                          name="pages"
+                          value={form.pages}
+                          onChange={handleInputChange}
+                          className={inputClassName}
+                        />
+                      </Field>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard
+                    eyebrow="Cover Upload"
+                    title="Replace cover when needed"
+                    description="Upload a fresh cover only if you want to swap the existing media reference."
+                  >
+                    <div className="rounded-[28px] border border-dashed border-[#d9e6c7] bg-[#fbfdf7] p-5">
+                      <input
+                        ref={coverInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        onChange={handleCoverSelect}
+                        className="hidden"
+                      />
+
+                      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm font-black text-[#141810]">
+                            Book cover
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-[#6b7280]">
+                            JPEG, PNG, or WEBP up to 5 MB. Upload only if you want
+                            to replace the current cover.
+                          </p>
+                          {form.coverFile && (
+                            <p className="mt-3 text-xs font-semibold text-[#496619]">
+                              {form.coverFile.name} ({formatFileSize(form.coverFile.size)})
+                            </p>
+                          )}
+                          {form.coverUploadError && (
+                            <p className="mt-2 text-xs font-semibold text-red-600">
+                              {form.coverUploadError}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={() => coverInputRef.current?.click()}
+                            className="h-11 rounded-full border border-[#d5e6c0] bg-white px-5 text-sm font-bold text-[#141810] transition hover:border-[#46EC12]"
+                          >
+                            Choose File
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCoverUpload}
+                            disabled={!form.coverFile || isSubmitting}
+                            className="h-11 rounded-full bg-[#141810] px-5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {form.coverUploadStatus === "uploaded"
+                              ? "Uploaded"
+                              : form.coverUploadStatus === "uploading" || isUploading
+                                ? "Uploading..."
+                                : "Upload Cover"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <StatusPill
+                          label={
+                            form.coverMediaId
+                              ? "Media linked"
+                              : form.coverUploadStatus === "selected"
+                                ? "Ready to upload"
+                                : "Not uploaded yet"
+                          }
+                          tone={form.coverMediaId ? "success" : "neutral"}
+                        />
+                      </div>
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard
+                    eyebrow="Categories"
+                    title="Assign book categories"
+                    description="Keep this book discoverable across all relevant category collections."
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {categories.map((category) => {
+                        const categoryId = category.id || category.category_id;
+                        const selected = form.categoryIds.includes(categoryId);
+
+                        return (
+                          <button
+                            key={categoryId}
+                            type="button"
+                            onClick={() => handleCategoryToggle(categoryId)}
+                            className={`rounded-[22px] border px-4 py-4 text-left transition ${
+                              selected
+                                ? "border-[#cfe4b2] bg-[#f4fbe8]"
+                                : "border-[#e5ebdf] bg-white hover:border-[#d5e6c0]"
+                            }`}
+                          >
+                            <p className="text-sm font-bold text-[#141810]">
+                              {category.name}
+                            </p>
+                            <p className="mt-1 text-xs font-medium text-[#6b7280]">
+                              {selected ? "Selected" : "Tap to add"}
+                            </p>
+                          </button>
+                        );
+                      })}
+
+                      {!categoryLoading && categories.length === 0 && (
+                        <div className="rounded-[22px] border border-[#e5ebdf] bg-white px-4 py-4 text-sm font-medium text-[#6b7280]">
+                          No categories available yet.
+                        </div>
+                      )}
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard
+                    eyebrow="Flags"
+                    title="Merchandising controls"
+                    description="Adjust visibility, feature states, and display badges."
+                  >
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {FLAG_OPTIONS.map(({ key, label }) => (
+                        <label
+                          key={key}
+                          className={`flex cursor-pointer items-center justify-between rounded-[20px] border px-4 py-4 transition ${
+                            form[key]
+                              ? "border-[#cfe4b2] bg-[#f5fbe9]"
+                              : "border-[#e8ede3] bg-[#fbfcf9]"
+                          }`}
+                        >
+                          <div>
+                            <p className="text-sm font-bold text-[#141810]">{label}</p>
+                            <p className="mt-1 text-xs font-medium text-[#6b7280]">
+                              {form[key] ? "Enabled" : "Disabled"}
+                            </p>
+                          </div>
+                          <input
+                            type="checkbox"
+                            name={key}
+                            checked={form[key]}
+                            onChange={handleInputChange}
+                            className="h-5 w-5 rounded border-[#c9d7b6] text-[#46EC12] focus:ring-[#46EC12]/30"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </SectionCard>
+
+                  <SectionCard
+                    eyebrow="Formats"
+                    title="Manage sellable formats"
+                    description="Update existing formats, replace digital files, or add new sellable editions."
+                    actions={
+                      <div className="flex flex-wrap gap-2">
+                        {FORMAT_OPTIONS.map((option) => (
+                          <button
+                            key={option.type}
+                            type="button"
+                            onClick={() => addFormat(option.type)}
+                            className="rounded-full border border-[#d5e6c0] bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#496619] transition hover:border-[#46EC12]"
+                          >
+                            Add {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    }
+                  >
+                    <div className="space-y-4">
+                      {form.formats.map((format, index) => {
+                        const digital = isDigitalFormat(format.type);
+
+                        return (
+                          <div
+                            key={format.localId}
+                            className="rounded-[28px] border border-[#dce8cd] bg-white p-5 shadow-[0_20px_60px_-34px_rgba(20,24,16,0.16)]"
+                          >
+                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                              <div>
+                                <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#7b8a63]">
+                                  Format {index + 1}
+                                </p>
+                                <h3 className="mt-1 text-lg font-black text-[#141810]">
+                                  {getFormatLabel(format.type)}
+                                </h3>
+                                <p className="mt-1 text-sm font-medium text-[#6b7280]">
+                                  {
+                                    FORMAT_OPTIONS.find(
+                                      (option) => option.type === format.type
+                                    )?.description
+                                  }
+                                </p>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeFormat(format.localId)}
+                                disabled={form.formats.length === 1}
+                                className="h-10 rounded-full border border-[#ecefe8] bg-[#fbfcf9] px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#6b7280] transition hover:border-red-200 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                              <Field label="Type">
+                                <select
+                                  value={format.type}
+                                  onChange={(event) =>
+                                    handleFormatChange(
+                                      format.localId,
+                                      "type",
+                                      event.target.value
+                                    )
+                                  }
+                                  className={selectClassName}
+                                >
+                                  {FORMAT_OPTIONS.map((option) => (
+                                    <option key={option.type} value={option.type}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </Field>
+
+                              <Field label="Price">
+                                <input
+                                  type="number"
+                                  value={format.price}
+                                  onChange={(event) =>
+                                    handleFormatChange(
+                                      format.localId,
+                                      "price",
+                                      event.target.value
+                                    )
+                                  }
+                                  className={inputClassName}
+                                />
+                              </Field>
+
+                              <Field label="Discount Amount">
+                                <input
+                                  type="number"
+                                  value={format.discountAmount}
+                                  onChange={(event) =>
+                                    handleFormatChange(
+                                      format.localId,
+                                      "discountAmount",
+                                      event.target.value
+                                    )
+                                  }
+                                  className={inputClassName}
+                                />
+                              </Field>
+
+                              {digital ? (
+                                <Field label="DRM">
+                                  <label className="flex h-14 items-center justify-between rounded-[18px] border border-[#dfe7d5] bg-white px-4 text-sm font-semibold text-[#141810]">
+                                    <span>
+                                      {format.drmEnabled ? "Enabled" : "Disabled"}
+                                    </span>
+                                    <input
+                                      type="checkbox"
+                                      checked={format.drmEnabled}
+                                      onChange={(event) =>
+                                        handleFormatChange(
+                                          format.localId,
+                                          "drmEnabled",
+                                          event.target.checked
+                                        )
+                                      }
+                                      className="h-5 w-5 rounded border-[#c9d7b6] text-[#46EC12] focus:ring-[#46EC12]/30"
+                                    />
+                                  </label>
+                                </Field>
+                              ) : (
+                                <Field label="Stock Count">
+                                  <input
+                                    type="number"
+                                    value={format.stockCount}
+                                    onChange={(event) =>
+                                      handleFormatChange(
+                                        format.localId,
+                                        "stockCount",
+                                        event.target.value
+                                      )
+                                    }
+                                    className={inputClassName}
+                                  />
+                                </Field>
+                              )}
+                            </div>
+
+                            {digital ? (
+                              <div className="mt-4 rounded-[24px] border border-dashed border-[#d9e6c7] bg-[#fbfdf7] p-4">
+                                <input
+                                  ref={(element) => {
+                                    formatInputRefs.current[format.localId] = element;
+                                  }}
+                                  type="file"
+                                  accept={getAcceptForFormat(format.type)}
+                                  onChange={(event) =>
+                                    handleFormatFileSelect(
+                                      format.localId,
+                                      event.target.files?.[0]
+                                    )
+                                  }
+                                  className="hidden"
+                                />
+
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                  <div>
+                                    <p className="text-sm font-black text-[#141810]">
+                                      {getFormatLabel(format.type)} file
+                                    </p>
+                                    <p className="mt-1 text-sm font-medium text-[#6b7280]">
+                                      {getFormatUploadHelp(format.type)}
+                                    </p>
+                                    {format.uploadName && (
+                                      <p className="mt-3 text-xs font-semibold text-[#496619]">
+                                        {format.uploadName}
+                                      </p>
+                                    )}
+                                    {format.uploadError && (
+                                      <p className="mt-2 text-xs font-semibold text-red-600">
+                                        {format.uploadError}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        formatInputRefs.current[format.localId]?.click()
+                                      }
+                                      className="h-11 rounded-full border border-[#d5e6c0] bg-white px-5 text-sm font-bold text-[#141810] transition hover:border-[#46EC12]"
+                                    >
+                                      Choose File
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleFormatUpload(format.localId)}
+                                      disabled={!format.uploadFile || isSubmitting}
+                                      className="h-11 rounded-full bg-[#141810] px-5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      {format.mediaId
+                                        ? "Uploaded"
+                                        : format.uploadStatus === "uploading" || isUploading
+                                          ? "Uploading..."
+                                          : "Upload File"}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  <StatusPill
+                                    label={
+                                      format.mediaId
+                                        ? "Media linked"
+                                        : format.uploadStatus === "selected"
+                                          ? "Ready to upload"
+                                          : "Not uploaded yet"
+                                    }
+                                    tone={format.mediaId ? "success" : "neutral"}
+                                  />
+                                  <StatusPill label="Private asset" tone="neutral" />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                <Field label="SKU">
+                                  <input
+                                    value={format.sku}
+                                    onChange={(event) =>
+                                      handleFormatChange(
+                                        format.localId,
+                                        "sku",
+                                        event.target.value
+                                      )
+                                    }
+                                    className={inputClassName}
+                                  />
+                                </Field>
+
+                                <Field label="ISBN">
+                                  <input
+                                    value={format.isbn}
+                                    onChange={(event) =>
+                                      handleFormatChange(
+                                        format.localId,
+                                        "isbn",
+                                        event.target.value
+                                      )
+                                    }
+                                    className={inputClassName}
+                                  />
+                                </Field>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </SectionCard>
 
                   {successMessage && (
                     <div className="rounded-2xl border border-[#daf2b4] bg-[#f7fde9] px-4 py-3 text-sm font-medium text-[#496619]">
@@ -506,39 +1331,52 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                     </div>
                   )}
 
-                  <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                     <button
                       type="button"
                       onClick={handleClose}
-                      disabled={updating || loadingBook}
-                      className="h-12 rounded-full border border-gray-200 bg-white px-6 text-sm font-bold text-[#4B5563]"
+                      disabled={isSubmitting}
+                      className="h-12 rounded-full border border-gray-200 bg-white px-6 text-sm font-bold text-[#4b5563] transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      disabled={updating || loadingBook}
-                      className="h-12 rounded-full bg-[#46EC12] px-6 text-sm font-black text-[#141810] disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={isSubmitting}
+                      className="h-12 rounded-full bg-[#46EC12] px-6 text-sm font-black text-[#141810] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {loadingBook ? "Loading..." : updating ? "Saving..." : "Save Changes"}
+                      {loadingBook
+                        ? "Loading..."
+                        : updating
+                          ? "Saving changes..."
+                          : isUploading
+                            ? "Uploading media..."
+                            : "Save Changes"}
                     </button>
                   </div>
                 </form>
               </div>
 
-              <div className="bg-[linear-gradient(180deg,#ffffff_0%,#eef8e0_100%)] p-6 sm:p-8">
+              <aside className="bg-[radial-gradient(circle_at_top,#ffffff_0%,#eef8e0_54%,#e6f2d5_100%)] p-6 sm:p-8">
                 <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-[#7b8a63]">
-                  Card Preview
+                  Live Summary
                 </p>
 
                 <div className="mt-5 overflow-hidden rounded-[30px] border border-[#dfe7d5] bg-white shadow-[0_24px_70px_-32px_rgba(20,24,16,0.35)]">
                   <div className="relative aspect-[4/5] bg-[#eef3e8]">
-                    <img
-                      src={form.preview}
-                      alt={form.title}
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(20,24,16,0)_0%,rgba(20,24,16,0.88)_100%)] px-6 pb-6 pt-20 text-white">
+                    {form.coverPreviewUrl ? (
+                      <img
+                        src={form.coverPreviewUrl}
+                        alt={form.title || "Book cover preview"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center px-6 text-center text-sm font-medium text-[#7b8a63]">
+                        Upload a cover to preview the listing card.
+                      </div>
+                    )}
+
+                    <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(20,24,16,0)_0%,rgba(20,24,16,0.9)_100%)] px-6 pb-6 pt-20 text-white">
                       <div className="flex flex-wrap gap-2">
                         {enabledFlags.map(({ key, label }) => (
                           <span
@@ -550,15 +1388,92 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                         ))}
                       </div>
                       <h3 className="mt-4 text-3xl font-black leading-tight">
-                        {form.titleMl || form.title}
+                        {form.titleMl || form.title || "Book title"}
                       </h3>
                       <p className="mt-2 text-sm font-medium text-white/80">
-                        {form.authorNameMl || form.authorName}
+                        {form.authorNameMl || form.authorName || "Author name"}
                       </p>
                     </div>
                   </div>
+
+                  <div className="space-y-5 p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#7b8a63]">
+                          Catalogue card
+                        </p>
+                        <h4 className="mt-2 text-2xl font-black text-[#141810]">
+                          {form.title || "Untitled book"}
+                        </h4>
+                        <p className="mt-1 text-sm font-semibold text-[#6b7280]">
+                          {form.authorName || "Author name"}
+                        </p>
+                      </div>
+
+                      <div className="rounded-[20px] bg-[#141810] px-4 py-3 text-right text-white">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/60">
+                          Starting Price
+                        </p>
+                        <p className="mt-1 text-2xl font-black">
+                          {previewPrice ? `Rs ${previewPrice}` : "--"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-[24px] bg-[#f7f9f3] px-4 py-4 text-sm font-medium leading-6 text-[#445046]">
+                      {form.description || "Description preview will appear here."}
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <PreviewStat
+                        label="Categories"
+                        value={
+                          selectedCategories.length > 0
+                            ? selectedCategories.map((category) => category.name).join(", ")
+                            : "Not selected"
+                        }
+                      />
+                      <PreviewStat
+                        label="Formats"
+                        value={form.formats.map((format) => getFormatLabel(format.type)).join(", ")}
+                      />
+                      <PreviewStat label="Edition" value={form.edition || "Not set"} />
+                      <PreviewStat label="Pages" value={form.pages || "Not set"} />
+                      <PreviewStat label="Language" value={form.languageCode || "Not set"} />
+                      <PreviewStat label="Status" value={form.status} />
+                    </div>
+
+                    <div className="rounded-[24px] border border-[#e8ede3] bg-[#fbfcf9] px-4 py-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7b8a63]">
+                        Upload Readiness
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <StatusPill
+                          label={form.coverMediaId ? "Cover ready" : "Cover pending"}
+                          tone={form.coverMediaId ? "success" : "neutral"}
+                        />
+                        {form.formats.map((format) => (
+                          <StatusPill
+                            key={format.localId}
+                            label={`${getFormatLabel(format.type)} ${
+                              isDigitalFormat(format.type)
+                                ? format.mediaId
+                                  ? "ready"
+                                  : "pending"
+                                : "configured"
+                            }`}
+                            tone={
+                              !isDigitalFormat(format.type) || format.mediaId
+                                ? "success"
+                                : "neutral"
+                            }
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </aside>
             </div>
           </div>
         </div>
@@ -567,13 +1482,62 @@ export default function BookEditModal({ isOpen, book, onClose }) {
   );
 }
 
-function Field({ label, children }) {
+function SectionCard({ eyebrow, title, description, actions, children }) {
+  return (
+    <section className="rounded-[30px] border border-[#dce8cd] bg-white p-5 shadow-[0_20px_60px_-34px_rgba(20,24,16,0.16)] sm:p-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#7b8a63]">
+            {eyebrow}
+          </p>
+          <h3 className="mt-1 text-xl font-black text-[#141810]">{title}</h3>
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-[#6b7280]">
+            {description}
+          </p>
+        </div>
+
+        {actions}
+      </div>
+
+      <div className="mt-5 space-y-5">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, required = false, children }) {
   return (
     <div>
-      <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] text-[#6B7280]">
+      <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] text-[#6b7280]">
         {label}
+        {required ? " *" : ""}
       </label>
       {children}
     </div>
+  );
+}
+
+function PreviewStat({ label, value }) {
+  return (
+    <div className="rounded-[22px] border border-[#e8ede3] bg-[#fbfcf9] px-4 py-4">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#7b8a63]">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-bold text-[#141810]">{value}</p>
+    </div>
+  );
+}
+
+function StatusPill({ label, tone }) {
+  const toneClassName =
+    tone === "success"
+      ? "border-[#d5e6c0] bg-[#f4fbe8] text-[#496619]"
+      : "border-[#e5ebdf] bg-white text-[#6b7280]";
+
+  return (
+    <span
+      className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${toneClassName}`}
+    >
+      {label}
+    </span>
   );
 }

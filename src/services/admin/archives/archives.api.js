@@ -1,9 +1,4 @@
-import api from "@/lib/admin-axios";
-import axios from "axios";
-
-const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
+import api, { apiRaw } from "@/lib/admin-axios";
 
 export const getArchives = async ({ search = "" } = {}) => {
   try {
@@ -66,22 +61,9 @@ export const deleteArchive = async (archiveId) => {
 
 export const downloadArchive = async (archiveId) => {
   try {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem(ACCESS_TOKEN_KEY)
-        : null;
-
-    const response = await axios.get(
-      `${API_ORIGIN}/api/admin/archives/download/${archiveId}`,
-      {
-        responseType: "blob",
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : undefined,
-      }
-    );
+    const response = await apiRaw.get(`/admin/archives/download/${archiveId}`, {
+      responseType: "blob",
+    });
 
     const disposition = response.headers["content-disposition"] || "";
     const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
