@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { buildCatalogHref } from "./catalog.utils";
 
 export default function Breadcrumb({
@@ -48,37 +48,49 @@ export default function Breadcrumb({
 
         <div className="flex items-center gap-3 self-start lg:self-auto">
           <span className="text-sm font-medium text-[#667892]">Sort by:</span>
-          <div className="flex items-center rounded-full border border-white/80 bg-white px-1.5 py-1 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.35)]">
-            <Link
-              href={buildCatalogHref(basePath, currentQuery, {
-                sort: "newest",
-                page: 1,
-              })}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                sort === "newest"
-                  ? "bg-[#126DEC] text-white"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Newest
-            </Link>
-            <Link
-              href={buildCatalogHref(basePath, currentQuery, {
-                sort: "rank",
-                page: 1,
-              })}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
-                sort === "rank"
-                  ? "bg-[#126DEC] text-white"
-                  : "text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              Best Selling
-              <ChevronDown size={15} />
-            </Link>
+          <div className="group relative">
+            <button className="flex items-center gap-2 rounded-full border border-white/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.35)] transition hover:border-[#c7d8f6] hover:text-slate-900">
+              <span>{sort === "rank" ? "Best Selling" : "Newest"}</span>
+              <ChevronDown size={15} className="transition group-hover:rotate-180" />
+            </button>
+
+            <div className="invisible absolute right-0 top-full z-20 mt-2 min-w-[190px] rounded-[18px] border border-[#e8eef8] bg-white p-2 opacity-0 shadow-[0_18px_40px_-24px_rgba(15,23,42,0.26)] transition-all group-hover:visible group-hover:opacity-100">
+              <SortOption
+                href={buildCatalogHref(basePath, currentQuery, {
+                  sort: "newest",
+                  page: 1,
+                })}
+                label="Newest"
+                active={sort === "newest"}
+              />
+              <SortOption
+                href={buildCatalogHref(basePath, currentQuery, {
+                  sort: "rank",
+                  page: 1,
+                })}
+                label="Best Selling"
+                active={sort === "rank"}
+              />
+            </div>
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function SortOption({ href, label, active }) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center justify-between rounded-[14px] px-3 py-2.5 text-sm font-semibold transition ${
+        active
+          ? "bg-[#edf5ff] text-[#126DEC]"
+          : "text-slate-600 hover:bg-[#f7faff] hover:text-slate-900"
+      }`}
+    >
+      <span>{label}</span>
+      {active ? <Check size={15} /> : null}
+    </Link>
   );
 }

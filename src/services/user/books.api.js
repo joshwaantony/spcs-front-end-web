@@ -15,6 +15,7 @@ const buildBooksQueryString = ({
   hasDiscount,
   inStock,
   isDigital,
+  physicalOnly,
   isFeatured,
   isNewArrival,
   isBestsellerManual,
@@ -50,6 +51,10 @@ const buildBooksQueryString = ({
 
   if (languageCode?.trim()) {
     params.set("languageCode", languageCode.trim());
+  }
+
+  if (physicalOnly) {
+    params.set("isDigital", "false");
   }
 
   const flags = {

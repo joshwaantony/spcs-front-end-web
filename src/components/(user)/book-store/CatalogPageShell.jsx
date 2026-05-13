@@ -15,6 +15,9 @@ export default function CatalogPageShell({
   subtitle,
   heroTone = "blue",
   lockedFormatType = "",
+  requestQueryOverrides,
+  allowedFormats,
+  hideDigitalToggle = false,
   emptyTitle,
   emptyDescription,
   pageToneClassName,
@@ -33,9 +36,11 @@ export default function CatalogPageShell({
 
   useEffect(() => {
     fetchBooks(searchParams, {
-      formatType: lockedFormatType || undefined,
+      ...requestQueryOverrides,
+      formatType: lockedFormatType || requestQueryOverrides?.formatType || undefined,
+      allowedFormats,
     });
-  }, [fetchBooks, lockedFormatType, searchParams]);
+  }, [allowedFormats, fetchBooks, lockedFormatType, requestQueryOverrides, searchParams]);
 
   useEffect(() => {
     fetchCategories();
@@ -66,6 +71,8 @@ export default function CatalogPageShell({
             currentQuery={filters}
             basePath={basePath}
             lockedFormatType={lockedFormatType}
+            allowedFormats={allowedFormats}
+            hideDigitalToggle={hideDigitalToggle}
           />
           <div className="flex-1">
             {error ? (

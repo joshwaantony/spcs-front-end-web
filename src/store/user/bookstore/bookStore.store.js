@@ -67,6 +67,14 @@ const mapFiltersToRequest = (filters) => ({
     filters.maxPrice === "" ? undefined : parseNumberInput(filters.maxPrice),
 });
 
+const filterBooksByAllowedFormats = (books, allowedFormats) => {
+  if (!Array.isArray(allowedFormats) || allowedFormats.length === 0) {
+    return books;
+  }
+
+  return books.filter((book) => allowedFormats.includes(book.formatType));
+};
+
 export const useUserBookStore = create((set, get) => ({
   books: [],
   total: 0,
@@ -93,11 +101,15 @@ export const useUserBookStore = create((set, get) => ({
       });
 
       const response = await getPublicBooks(mapFiltersToRequest(filters));
+      const books = filterBooksByAllowedFormats(
+        response.books,
+        overrides.allowedFormats
+      );
 
       set({
-        books: response.books,
-        total: response.meta.total,
-        totalPages: response.meta.totalPages,
+        books,
+        total: books.length,
+        totalPages: Math.max(1, Math.ceil(books.length / response.meta.limit)),
         filters: {
           ...filters,
           page: response.meta.page,

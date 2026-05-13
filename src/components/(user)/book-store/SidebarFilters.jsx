@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Sparkles, X } from "lucide-react";
+import { Search, Sparkles, X, SlidersHorizontal, BadgeIndianRupee, Languages, PackageCheck, Tags } from "lucide-react";
 import {
   buildCatalogHref,
   FLAG_FILTERS,
@@ -15,6 +15,8 @@ export default function SidebarFilters({
   currentQuery,
   basePath,
   lockedFormatType,
+  allowedFormats,
+  hideDigitalToggle,
 }) {
   const activeCategoryId = currentQuery.categoryId || "";
   const activeFormatType = lockedFormatType || currentQuery.formatType || "";
@@ -34,17 +36,27 @@ export default function SidebarFilters({
 
   return (
     <aside className="self-start w-full lg:sticky lg:top-28 lg:w-[270px]">
-      <div className="rounded-[26px] border border-white/80 bg-white p-5 shadow-[0_18px_50px_-32px_rgba(15,23,42,0.2)]">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h3 className="text-[30px] font-black leading-none text-[#1a2230]">Filters</h3>
+      <div className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_18px_50px_-32px_rgba(15,23,42,0.2)]">
+        <div className="mb-6 rounded-[22px] bg-[linear-gradient(135deg,#f7faff_0%,#eef4ff_100%)] p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#126DEC] shadow-[0_12px_20px_-16px_rgba(18,109,236,0.8)]">
+                <SlidersHorizontal size={18} />
+              </div>
+              <h3 className="mt-3 text-[24px] font-black leading-none text-[#1a2230]">
+                Refine Your Shelf
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-[#6b7d96]">
+                Start with a title, then narrow by format, budget, language, or availability.
+              </p>
+            </div>
           </div>
           {hasActiveFilters ? (
             <Link
               href={basePath}
-              className="text-sm font-semibold text-[#126DEC] hover:underline"
+              className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#126DEC] shadow-[0_10px_20px_-16px_rgba(18,109,236,0.65)] transition hover:-translate-y-0.5"
             >
-              Reset
+              Clear all
             </Link>
           ) : null}
         </div>
@@ -83,6 +95,11 @@ export default function SidebarFilters({
           {currentQuery.isDigital ? (
             <input type="hidden" name="isDigital" value="true" />
           ) : null}
+          <SectionLabel
+            title="Search books"
+            description="Look up a book title, author, or keyword."
+            icon={<Search size={14} />}
+          />
           <label className="flex items-center gap-3 rounded-[18px] border border-[#edf1f7] bg-[#f8faff] px-4 py-3">
             <Search size={18} className="text-slate-400" />
             <input
@@ -97,9 +114,17 @@ export default function SidebarFilters({
 
         {!lockedFormatType ? (
           <>
-            <SectionLabel title="Format" />
+            <SectionLabel
+              title="Choose a format"
+              description="Pick the edition that suits how you want to read."
+              icon={<PackageCheck size={14} />}
+            />
             <div className="mb-6 flex flex-wrap gap-2">
-              {FORMAT_FILTERS.map((format) => {
+              {FORMAT_FILTERS.filter((format) =>
+                Array.isArray(allowedFormats) && allowedFormats.length > 0
+                  ? allowedFormats.includes(format.key)
+                  : true
+              ).map((format) => {
                 const active = activeFormatType === format.key;
 
                 return (
@@ -131,16 +156,20 @@ export default function SidebarFilters({
         ) : (
           <div className="mb-6 rounded-[20px] bg-[#126DEC] px-4 py-4 text-white shadow-[0_16px_40px_-28px_rgba(18,109,236,0.8)]">
             <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
-              Format Focus
+              Curated Format
             </p>
             <p className="mt-2 text-base font-black">{activeFormatType}</p>
             <p className="mt-1 text-sm font-medium text-white/70">
-              This page is curated specifically for this format.
+              This page is already focused on this reading format, so you can browse faster.
             </p>
           </div>
         )}
 
-        <SectionLabel title="Categories" />
+        <SectionLabel
+          title="Browse by category"
+          description="Jump straight into the kind of books you want."
+          icon={<Sparkles size={14} />}
+        />
         <div className="mb-6 flex flex-col gap-2">
           {categories.slice(0, 8).map((category) => {
             const active = activeCategoryId === category.id;
@@ -172,7 +201,11 @@ export default function SidebarFilters({
           })}
         </div>
 
-        <SectionLabel title="Price Range" />
+        <SectionLabel
+          title="Set your budget"
+          description="Show books within the price range you want."
+          icon={<BadgeIndianRupee size={14} />}
+        />
         <form action={basePath} className="mb-6 space-y-3">
           <input type="hidden" name="page" value="1" />
           <PersistedQueryInputs
@@ -198,11 +231,15 @@ export default function SidebarFilters({
             />
           </div>
           <button className="w-full rounded-full border border-[#cfe0ff] bg-white py-2.5 text-sm font-bold text-[#126DEC] transition hover:border-[#126DEC] hover:bg-[#f3f8ff]">
-            Apply Price
+            Update price range
           </button>
         </form>
 
-        <SectionLabel title="Language" />
+        <SectionLabel
+          title="Choose a language"
+          description="Filter by language code like EN or ML."
+          icon={<Languages size={14} />}
+        />
         <form action={basePath} className="mb-6 space-y-3">
           <input type="hidden" name="page" value="1" />
           <PersistedQueryInputs
@@ -217,14 +254,18 @@ export default function SidebarFilters({
             className="h-11 w-full rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold uppercase text-slate-800 outline-none focus:border-[#126DEC]"
           />
           <button className="w-full rounded-full border border-[#cfe0ff] bg-white py-2.5 text-sm font-bold text-[#126DEC] transition hover:border-[#126DEC] hover:bg-[#f3f8ff]">
-            Apply Language
+            Update language
           </button>
         </form>
 
-        <SectionLabel title="Availability" />
+        <SectionLabel
+          title="Ready to buy"
+          description="Show books that match how and when you want to order."
+          icon={<Tags size={14} />}
+        />
         <div className="mb-6 space-y-2">
           <ToggleLink
-            label="In Stock Only"
+            label="Only show books in stock"
             active={currentQuery.inStock}
             href={buildCatalogHref(basePath, currentQuery, {
               inStock: currentQuery.inStock ? undefined : true,
@@ -232,31 +273,39 @@ export default function SidebarFilters({
             })}
           />
           <ToggleLink
-            label="Discounted Titles"
+            label="Only show discounted books"
             active={currentQuery.hasDiscount}
             href={buildCatalogHref(basePath, currentQuery, {
               hasDiscount: currentQuery.hasDiscount ? undefined : true,
               page: 1,
             })}
           />
-          <ToggleLink
-            label="Digital Only"
-            active={currentQuery.isDigital}
-            href={buildCatalogHref(basePath, currentQuery, {
-              isDigital: currentQuery.isDigital ? undefined : true,
-              page: 1,
-            })}
-          />
+          {!hideDigitalToggle ? (
+            <ToggleLink
+              label="Only show digital books"
+              active={currentQuery.isDigital}
+              href={buildCatalogHref(basePath, currentQuery, {
+                isDigital: currentQuery.isDigital ? undefined : true,
+                page: 1,
+              })}
+            />
+          ) : null}
         </div>
 
-        <SectionLabel title="Editorial Filters" />
+        <SectionLabel
+          title="Curated picks"
+          description="Let us narrow the shelf based on popular discovery cues."
+          icon={<PackageCheck size={14} />}
+        />
         <div className="space-y-2">
           {FLAG_FILTERS.map((flag) => {
             const active = isFilterActive(currentQuery[flag.key]);
 
             return (
-              <Link
+              <ToggleLink
                 key={flag.key}
+                label={flag.label}
+                active={active}
                 href={
                   active
                     ? buildCatalogHref(basePath, currentQuery, {
@@ -268,17 +317,7 @@ export default function SidebarFilters({
                         page: 1,
                       })
                 }
-                className={`flex items-center justify-between rounded-[16px] border px-4 py-3 text-sm font-bold transition ${
-                  active
-                    ? "border-[#b8d4ff] bg-[#edf5ff] text-[#126DEC]"
-                    : "border-[#edf1f7] bg-white text-slate-600 hover:border-[#d8e1f1]"
-                }`}
-              >
-                <span>{flag.label}</span>
-                <span className="text-xs uppercase tracking-[0.18em]">
-                  {active ? "On" : "Off"}
-                </span>
-              </Link>
+              />
             );
           })}
         </div>
@@ -287,11 +326,23 @@ export default function SidebarFilters({
   );
 }
 
-function SectionLabel({ title }) {
+function SectionLabel({ title, description, icon }) {
   return (
-    <p className="mb-3 text-sm font-bold text-[#111418]">
-      {title}
-    </p>
+    <div className="mb-3">
+      <p className="flex items-center gap-2 text-sm font-bold text-[#111418]">
+        {icon ? (
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#f3f7ff] text-[#126DEC]">
+            {icon}
+          </span>
+        ) : null}
+        {title}
+      </p>
+      {description ? (
+        <p className="mt-1 text-xs font-medium leading-5 text-[#7a8aa2]">
+          {description}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -313,15 +364,30 @@ function ToggleLink({ label, active, href }) {
   return (
     <Link
       href={href}
-      className={`flex items-center justify-between rounded-[16px] border px-4 py-3 text-sm font-bold transition ${
+      className={`flex items-center justify-between rounded-[18px] border px-4 py-3 text-sm font-bold transition ${
         active
           ? "border-[#b8d4ff] bg-[#edf5ff] text-[#126DEC]"
           : "border-[#edf1f7] bg-white text-slate-600 hover:border-[#d8e1f1]"
       }`}
     >
       <span>{label}</span>
-      <span className="text-xs uppercase tracking-[0.18em]">
-        {active ? "On" : "Off"}
+      <span className="flex items-center gap-2">
+        <span className={`text-[10px] font-black uppercase tracking-[0.18em] ${
+          active ? "text-[#126DEC]" : "text-slate-500"
+        }`}>
+          {active ? "On" : "Off"}
+        </span>
+        <span
+          className={`relative h-6 w-11 rounded-full transition ${
+            active ? "bg-[#126DEC]" : "bg-[#dbe4f2]"
+          }`}
+        >
+          <span
+            className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-[0_4px_10px_-4px_rgba(15,23,42,0.35)] transition ${
+              active ? "left-6" : "left-1"
+            }`}
+          />
+        </span>
       </span>
     </Link>
   );

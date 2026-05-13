@@ -1,16 +1,16 @@
 export const FLAG_FILTERS = [
-  { key: "isFeatured", label: "Featured Picks" },
-  { key: "isNewArrival", label: "New Arrivals" },
-  { key: "isBestsellerManual", label: "Best Sellers" },
-  { key: "isAwardWinner", label: "Award Winners" },
-  { key: "isPrePublication", label: "Pre Publication" },
+  { key: "isFeatured", label: "Staff picks" },
+  { key: "isNewArrival", label: "Just arrived" },
+  { key: "isBestsellerManual", label: "Popular right now" },
+  { key: "isAwardWinner", label: "Award-winning reads" },
+  { key: "isPrePublication", label: "Available for pre-order" },
 ];
 
 export const FORMAT_FILTERS = [
-  { key: "PAPERBACK", label: "Paperback" },
-  { key: "HARDCOVER", label: "Hardcover" },
-  { key: "EBOOK", label: "E-Book" },
-  { key: "AUDIO", label: "Audiobook" },
+  { key: "PAPERBACK", label: "Paperback edition" },
+  { key: "HARDCOVER", label: "Hardcover edition" },
+  { key: "EBOOK", label: "E-book edition" },
+  { key: "AUDIO", label: "Audiobook edition" },
 ];
 
 export const buildCatalogHref = (basePath, currentQuery, updates = {}) => {
