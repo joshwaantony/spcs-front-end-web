@@ -12,22 +12,144 @@ import {
 const isSuccessResponse = (response) =>
   response?.success === true || response?.status === "success";
 
-const normalizeBook = (book) => {
+const getMediaUrl = (media) => {
+  if (!media) {
+    return "";
+  }
+
+  return (
+    media.url ||
+    media.secureUrl ||
+    media.fileUrl ||
+    media.path ||
+    media.src ||
+    ""
+  );
+};
+
+const getPrimaryFormat = (formats = []) => {
+  if (!Array.isArray(formats) || formats.length === 0) {
+    return null;
+  }
+
+  return (
+    formats.find((format) => format?.type === "PAPERBACK") ||
+    formats.find((format) => format?.type === "HARDCOVER") ||
+    formats[0]
+  );
+};
+
+const mapFormatTypeToLegacyType = (type) => {
+  if (type === "AUDIO_BOOK" || type === "AUDIOBOOK") {
+    return "AUDIO";
+  }
+
+  if (type === "HARD_COPY") {
+    return "PAPERBACK";
+  }
+
+  return type || "PAPERBACK";
+};
+
+export const normalizeBook = (book) => {
   if (!book) {
     return null;
   }
+
+  const primaryCategoryLink = Array.isArray(book.categories)
+    ? book.categories[0]
+    : null;
+  const primaryCategory = primaryCategoryLink?.category || null;
+  const primaryFormat = getPrimaryFormat(book.formats);
+  const coverImageUrl =
+    book.cover_image_url ||
+    book.image ||
+    getMediaUrl(book.coverMedia) ||
+    getMediaUrl(primaryFormat?.media);
+  const title = book.title || book.name || "";
+  const authorName = book.authorName || book.author || "";
+  const language = book.languageCode || book.language || "";
+  const categoryId =
+    primaryCategory?.id ||
+    primaryCategoryLink?.categoryId ||
+    book.category_id ||
+    "";
+  const categoryName =
+    primaryCategory?.name ||
+    book.category_name ||
+    (typeof book.category === "string" ? book.category : "");
+  const price =
+    primaryFormat?.price ??
+    book.price ??
+    "";
+  const stockCount =
+    primaryFormat?.stockCount ??
+    book.stock ??
+    0;
+  const unlimitedStock =
+    primaryFormat?.hasUnlimitedStock ??
+    book.unlimited_stock ??
+    false;
+  const status = book.status || "DRAFT";
 
   return {
     ...book,
     id: book.id || book.book_id || "",
     book_id: book.book_id || book.id || "",
-    title: book.title || book.name || "",
-    name: book.name || book.title || "",
-    image: book.image || book.cover_image_url || "",
-    cover_image_url: book.cover_image_url || book.image || "",
+    title,
+    name: title,
+    author: authorName,
+    authorName: authorName,
+    malayalam_name: book.titleMl || book.malayalam_name || "",
+    author_malayalam: book.authorNameMl || book.author_malayalam || "",
+    image: coverImageUrl,
+    cover_image_url: coverImageUrl,
+    language,
+    category: categoryId,
+    category_id: categoryId,
+    category_name: categoryName,
+    price: String(price),
+    discountAmount: String(
+      primaryFormat?.discountAmount ?? book.discountAmount ?? 0
+    ),
+    formatId: primaryFormat?.id || book.formatId || "",
+    formatMediaId: primaryFormat?.mediaId || book.formatMediaId || "",
+    formatIsActive: Boolean(
+      primaryFormat?.isActive ?? book.formatIsActive ?? true
+    ),
+    formatIsDigitalEnabled: Boolean(
+      primaryFormat?.isDigitalEnabled ?? book.formatIsDigitalEnabled
+    ),
+    formatDrmEnabled: Boolean(
+      primaryFormat?.drmEnabled ?? book.formatDrmEnabled ?? true
+    ),
+    sku: primaryFormat?.sku || book.sku || "",
+    type: mapFormatTypeToLegacyType(primaryFormat?.type || book.type),
+    isbn: primaryFormat?.isbn || book.isbn || "",
+    stock: String(stockCount),
+    unlimited_stock: Boolean(unlimitedStock),
+    best_seller: Boolean(
+      book.isBestsellerManual ?? book.best_seller
+    ),
+    award_winner: Boolean(book.isAwardWinner ?? book.award_winner),
+    new_arrival: Boolean(book.isNewArrival ?? book.new_arrival),
+    republication: Boolean(
+      book.isPrePublication ?? book.republication
+    ),
+    highlight: Boolean(book.isFeatured ?? book.highlight),
+    rank: book.rankOrder ?? book.rank ?? 0,
+    num_of_pages: book.pages ?? book.num_of_pages ?? 0,
+    publisher:
+      book.publisher?.name ||
+      book.publisherName ||
+      book.publisher ||
+      "",
+    status,
     badge:
       book.badge ||
-      (book.best_seller ? "Bestseller" : "Standard"),
+      (book.isBestsellerManual ?? book.best_seller
+        ? "Bestseller"
+        : status),
     createdAt: book.createdAt || book.created_at || "",
     created_at: book.created_at || book.createdAt || "",
   };
@@ -74,14 +196,7 @@ const parseApiDate = (value) => {
   if (!value) {
     return null;
   }
-
-  const [day, month, year] = value.split("-");
-
-  if (!day || !month || !year) {
-    return null;
-  }
-
-  const date = new Date(`${year}-${month}-${day}T00:00:00`);
+  const date = new Date(`${value}T00:00:00`);
 
   return Number.isNaN(date.getTime()) ? null : date;
 };
@@ -217,8 +332,8 @@ export const useBooksStore = create((set, get) => ({
       const res = await getBooks({
         filter: activeFilter,
         search: activeSearch,
-        from_date: activeFromDate,
-        to_date: activeToDate,
+        fromDate: activeFromDate,
+        toDate: activeToDate,
         page: activePage,
         limit: activeLimit,
       });
@@ -228,16 +343,16 @@ export const useBooksStore = create((set, get) => ({
       }
 
       set({
-        books: (res.data?.items || []).map(normalizeBook).filter(Boolean),
+        books: (res.data || []).map(normalizeBook).filter(Boolean),
         filter: activeFilter,
         search: activeSearch,
         inputSearch: activeSearch,
         fromDate: activeFromDate,
         toDate: activeToDate,
-        page: res.data?.page || activePage,
-        limit: res.data?.limit || activeLimit,
-        total: res.data?.total || 0,
-        totalPages: res.data?.totalPages || 0,
+        page: res.meta?.page || activePage,
+        limit: res.meta?.limit || activeLimit,
+        total: res.meta?.total || 0,
+        totalPages: res.meta?.totalPages || 0,
         loading: false,
         error: null,
       });

@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HiX } from "react-icons/hi";
 import { useBooksStore } from "@/store/admin/books/books.store";
+import { normalizeBook } from "@/store/admin/books/books.store";
 import { useCategoryStore } from "@/store/admin/books/category.store";
 import { useToastStore } from "@/store/ui/toast.store";
+import { getBookById } from "@/services/admin/books/books.api";
 
 const inputClassName =
   "h-12 w-full rounded-[16px] border border-[#dfe7d5] bg-white px-4 text-sm font-semibold text-[#141810] outline-none transition focus:border-[#46EC12] focus:ring-4 focus:ring-[#46EC12]/10";
@@ -28,46 +30,55 @@ const getLinkedId = (value) => {
 };
 
 const buildForm = (book) => ({
-  name: book?.name || "",
-  author: book?.author || "",
+  title: book?.title || book?.name || "",
+  authorName: book?.authorName || book?.author || "",
   category: getLinkedId(book?.category) || book?.category_id || "",
-  type: book?.type || "HARD_COPY",
+  type: book?.type || "PAPERBACK",
   price: String(book?.price || ""),
-  malayalam_name: book?.malayalam_name || "",
-  author_malayalam: book?.author_malayalam || "",
-  best_seller: Boolean(book?.best_seller),
+  titleMl: book?.titleMl || book?.malayalam_name || "",
+  authorNameMl: book?.authorNameMl || book?.author_malayalam || "",
+  isBestsellerManual: Boolean(book?.isBestsellerManual ?? book?.best_seller),
   description: book?.description || "",
   edition: book?.edition || "",
   isbn: book?.isbn || "",
-  num_of_pages: String(book?.num_of_pages || ""),
-  publisher: book?.publisher || "",
-  language: book?.language || "",
-  discount: getLinkedId(book?.discount) || book?.discount_id || "",
-  status: book?.status || "ACTIVE",
-  award_winner: Boolean(book?.award_winner),
-  new_arrival: Boolean(book?.new_arrival),
-  republication: Boolean(book?.republication),
-  highlight: Boolean(book?.highlight),
-  rank: String(book?.rank || ""),
+  pages: String((book?.pages ?? book?.num_of_pages) || ""),
+  publisherId: book?.publisherId || "",
+  languageCode: book?.languageCode || book?.language || "",
+  discountAmount: String(book?.discountAmount || "0"),
+  sku: book?.sku || "",
+  status: book?.status || "DRAFT",
+  isAwardWinner: Boolean(book?.isAwardWinner ?? book?.award_winner),
+  isNewArrival: Boolean(book?.isNewArrival ?? book?.new_arrival),
+  isPrePublication: Boolean(
+    book?.isPrePublication ?? book?.republication
+  ),
+  isFeatured: Boolean(book?.isFeatured ?? book?.highlight),
+  rankOrder: String((book?.rankOrder ?? book?.rank) || ""),
   unlimited_stock: Boolean(book?.unlimited_stock),
   stock: String(book?.stock ?? ""),
-  cover_image_url: book?.cover_image_url || "",
+  formatId: book?.formatId || "",
+  formatMediaId: book?.formatMediaId || "",
+  formatIsActive: Boolean(book?.formatIsActive ?? true),
+  formatIsDigitalEnabled: Boolean(book?.formatIsDigitalEnabled),
+  formatDrmEnabled: Boolean(book?.formatDrmEnabled ?? true),
+  coverMediaId: book?.coverMediaId || "",
   cover_image: null,
   preview: book?.cover_image_url || "",
 });
 
 const toggleFields = [
-  { key: "best_seller", label: "Best Seller" },
-  { key: "award_winner", label: "Award Winner" },
-  { key: "new_arrival", label: "New Arrival" },
-  { key: "republication", label: "Republication" },
-  { key: "highlight", label: "Highlight" },
+  { key: "isBestsellerManual", label: "Best Seller" },
+  { key: "isAwardWinner", label: "Award Winner" },
+  { key: "isNewArrival", label: "New Arrival" },
+  { key: "isPrePublication", label: "Pre Publication" },
+  { key: "isFeatured", label: "Featured" },
   { key: "unlimited_stock", label: "Unlimited Stock" },
 ];
 
 export default function BookEditModal({ isOpen, book, onClose }) {
   const [form, setForm] = useState(() => buildForm(book));
   const [successMessage, setSuccessMessage] = useState("");
+  const [loadingBook, setLoadingBook] = useState(false);
   const fileInputRef = useRef(null);
   const showToast = useToastStore((state) => state.showToast);
   const {
@@ -100,13 +111,48 @@ export default function BookEditModal({ isOpen, book, onClose }) {
   );
 
   useEffect(() => {
-    if (isOpen && book) {
+    if (!isOpen || !book) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadBook = async () => {
       setForm(buildForm(book));
       setSuccessMessage("");
+      setLoadingBook(true);
       resetUpdateBookState();
       fetchCategories(1, 100, "");
-    }
-  }, [isOpen, book, resetUpdateBookState, fetchCategories]);
+
+      try {
+        const res = await getBookById(book.id || book.book_id);
+
+        if (cancelled) {
+          return;
+        }
+
+        const detailedBook = normalizeBook(res?.data || res);
+        setForm(buildForm(detailedBook || book));
+      } catch (error) {
+        if (!cancelled) {
+          showToast({
+            type: "error",
+            message: error?.message || "Failed to fetch book details.",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingBook(false);
+        }
+      }
+    };
+
+    loadBook();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, book, resetUpdateBookState, fetchCategories, showToast]);
 
   useEffect(() => {
     if (!updateError) {
@@ -121,7 +167,7 @@ export default function BookEditModal({ isOpen, book, onClose }) {
   }
 
   const handleClose = () => {
-    if (updating) {
+    if (updating || loadingBook) {
       return;
     }
 
@@ -137,7 +183,7 @@ export default function BookEditModal({ isOpen, book, onClose }) {
       ...current,
       [name]: type === "checkbox" ? checked : value,
       ...(name === "unlimited_stock" && checked ? { stock: "0" } : {}),
-      ...(name === "cover_image_url" ? { preview: value } : {}),
+      ...(name === "preview" ? { preview: value } : {}),
     }));
   };
 
@@ -166,50 +212,54 @@ export default function BookEditModal({ isOpen, book, onClose }) {
     event.preventDefault();
     setSuccessMessage("");
     const normalizedPrice = Number(form.price);
-    const normalizedPages = Number(form.num_of_pages);
+    const normalizedPages = Number(form.pages);
     const normalizedRank =
-      form.rank.trim() === "" ? 0 : Number(form.rank);
+      form.rankOrder.trim() === "" ? 0 : Number(form.rankOrder);
     const normalizedStock = form.unlimited_stock
       ? 0
       : Number(form.stock);
+    const normalizedDiscountAmount = Number(form.discountAmount);
 
-    const normalizedPayload = {
-      name: form.name.trim(),
-      author: form.author.trim(),
-      category: form.category.trim(),
-      type: form.type,
-      price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
-      malayalam_name: form.malayalam_name.trim(),
-      author_malayalam: form.author_malayalam.trim(),
-      best_seller: form.best_seller,
+    const payload = {
+      title: form.title.trim(),
+      titleMl: form.titleMl.trim(),
+      authorName: form.authorName.trim() || null,
+      authorNameMl: form.authorNameMl.trim() || null,
       description: form.description.trim(),
       edition: form.edition.trim(),
-      isbn: form.isbn.trim(),
-      num_of_pages: Number.isFinite(normalizedPages) ? normalizedPages : 0,
-      publisher: form.publisher.trim(),
-      language: form.language.trim(),
-      discount: form.discount.trim(),
+      pages: Number.isFinite(normalizedPages) ? normalizedPages : undefined,
+      languageCode: form.languageCode.trim() || undefined,
       status: form.status,
-      award_winner: form.award_winner,
-      new_arrival: form.new_arrival,
-      republication: form.republication,
-      highlight: form.highlight,
-      rank: Number.isFinite(normalizedRank) ? normalizedRank : 0,
-      unlimited_stock: form.unlimited_stock,
-      stock: Number.isFinite(normalizedStock) ? normalizedStock : 0,
-      cover_image_url: form.cover_image_url.trim(),
+      rankOrder: Number.isFinite(normalizedRank) ? normalizedRank : 0,
+      isBestsellerManual: form.isBestsellerManual,
+      isFeatured: form.isFeatured,
+      isAwardWinner: form.isAwardWinner,
+      isNewArrival: form.isNewArrival,
+      isPrePublication: form.isPrePublication,
+      publisherId: form.publisherId.trim() || null,
+      coverMediaId: form.coverMediaId.trim() || null,
+      categoryIds: form.category.trim() ? [form.category.trim()] : [],
+      formats: [
+        {
+          id: form.formatId || undefined,
+          type: form.type,
+          price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+          discountAmount: Number.isFinite(normalizedDiscountAmount)
+            ? normalizedDiscountAmount
+            : 0,
+          sku: form.sku.trim() || undefined,
+          isbn: form.isbn.trim() || undefined,
+          hasUnlimitedStock: form.unlimited_stock,
+          stockCount: Number.isFinite(normalizedStock) ? normalizedStock : 0,
+          mediaId: form.formatMediaId || undefined,
+          isDigitalEnabled:
+            form.type === "EBOOK" ? true : form.formatIsDigitalEnabled,
+          drmEnabled:
+            form.type === "EBOOK" ? true : form.formatDrmEnabled,
+          isActive: form.formatIsActive,
+        },
+      ],
     };
-
-    const payload = form.cover_image
-      ? (() => {
-          const formData = new FormData();
-          Object.entries(normalizedPayload).forEach(([key, value]) => {
-            formData.append(key, String(value));
-          });
-          formData.append("cover_image", form.cover_image);
-          return formData;
-        })()
-      : normalizedPayload;
 
     try {
       await updateBook(book.id || book.book_id, payload);
@@ -266,6 +316,12 @@ export default function BookEditModal({ isOpen, book, onClose }) {
             <div className="grid gap-0 xl:grid-cols-[1.1fr_0.9fr]">
               <div className="border-b border-[#e4ebda] p-6 sm:p-8 xl:border-b-0 xl:border-r">
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  {loadingBook ? (
+                    <div className="rounded-2xl border border-[#dfe7d5] bg-white px-4 py-3 text-sm font-medium text-[#6B7280]">
+                      Loading latest book details...
+                    </div>
+                  ) : null}
+
                   <div>
                     <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] text-[#6B7280]">
                       Replace Cover
@@ -298,16 +354,16 @@ export default function BookEditModal({ isOpen, book, onClose }) {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label="Book Name">
-                      <input name="name" value={form.name} onChange={handleChange} className={inputClassName} />
+                      <input name="title" value={form.title} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Author">
-                      <input name="author" value={form.author} onChange={handleChange} className={inputClassName} />
+                      <input name="authorName" value={form.authorName} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Malayalam Name">
-                      <input name="malayalam_name" value={form.malayalam_name} onChange={handleChange} className={inputClassName} />
+                      <input name="titleMl" value={form.titleMl} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Author in Malayalam">
-                      <input name="author_malayalam" value={form.author_malayalam} onChange={handleChange} className={inputClassName} />
+                      <input name="authorNameMl" value={form.authorNameMl} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Category ID">
                       <select
@@ -339,9 +395,10 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                     </Field>
                     <Field label="Book Type">
                       <select name="type" value={form.type} onChange={handleChange} className={selectClassName}>
-                        <option value="HARD_COPY">Hard Copy</option>
+                        <option value="PAPERBACK">Paperback</option>
+                        <option value="HARDCOVER">Hardcover</option>
                         <option value="EBOOK">Ebook</option>
-                        <option value="AUDIO_BOOK">Audiobook</option>
+                        <option value="AUDIO">Audiobook</option>
                       </select>
                     </Field>
                     <Field label="Price">
@@ -354,16 +411,16 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                       <input name="isbn" value={form.isbn} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Pages">
-                      <input type="number" name="num_of_pages" value={form.num_of_pages} onChange={handleChange} className={inputClassName} />
+                      <input type="number" name="pages" value={form.pages} onChange={handleChange} className={inputClassName} />
                     </Field>
-                    <Field label="Publisher">
-                      <input name="publisher" value={form.publisher} onChange={handleChange} className={inputClassName} />
+                    <Field label="Publisher ID">
+                      <input name="publisherId" value={form.publisherId} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Language">
-                      <input name="language" value={form.language} onChange={handleChange} className={inputClassName} />
+                      <input name="languageCode" value={form.languageCode} onChange={handleChange} className={inputClassName} />
                     </Field>
-                    <Field label="Discount ID">
-                      <input name="discount" value={form.discount} onChange={handleChange} className={inputClassName} />
+                    <Field label="Discount Amount">
+                      <input name="discountAmount" value={form.discountAmount} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Status">
                       <select
@@ -372,13 +429,15 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                         onChange={handleChange}
                         className={selectClassName}
                       >
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
                         <option value="DRAFT">Draft</option>
+                        <option value="PUBLISHED">Published</option>
+                        <option value="ARCHIVED">Archived</option>
+                        <option value="OUT_OF_STOCK">Out of Stock</option>
+                        <option value="DISCONTINUED">Discontinued</option>
                       </select>
                     </Field>
                     <Field label="Rank">
-                      <input type="number" name="rank" value={form.rank} onChange={handleChange} className={inputClassName} />
+                      <input type="number" name="rankOrder" value={form.rankOrder} onChange={handleChange} className={inputClassName} />
                     </Field>
                     <Field label="Stock">
                       <input
@@ -390,8 +449,14 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                         className={`${inputClassName} disabled:cursor-not-allowed disabled:bg-[#f2f5ee]`}
                       />
                     </Field>
-                    <Field label="Cover Image URL">
-                      <input name="cover_image_url" value={form.cover_image_url} onChange={handleChange} className={inputClassName} />
+                    <Field label="SKU">
+                      <input name="sku" value={form.sku} onChange={handleChange} className={inputClassName} />
+                    </Field>
+                    <Field label="Cover Media ID">
+                      <input name="coverMediaId" value={form.coverMediaId} onChange={handleChange} className={inputClassName} />
+                    </Field>
+                    <Field label="Cover Preview URL">
+                      <input name="preview" value={form.preview} onChange={handleChange} className={inputClassName} />
                     </Field>
                   </div>
 
@@ -445,17 +510,17 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                     <button
                       type="button"
                       onClick={handleClose}
-                      disabled={updating}
+                      disabled={updating || loadingBook}
                       className="h-12 rounded-full border border-gray-200 bg-white px-6 text-sm font-bold text-[#4B5563]"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      disabled={updating}
+                      disabled={updating || loadingBook}
                       className="h-12 rounded-full bg-[#46EC12] px-6 text-sm font-black text-[#141810] disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {updating ? "Saving..." : "Save Changes"}
+                      {loadingBook ? "Loading..." : updating ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 </form>
@@ -469,8 +534,8 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                 <div className="mt-5 overflow-hidden rounded-[30px] border border-[#dfe7d5] bg-white shadow-[0_24px_70px_-32px_rgba(20,24,16,0.35)]">
                   <div className="relative aspect-[4/5] bg-[#eef3e8]">
                     <img
-                      src={form.preview || form.cover_image_url}
-                      alt={form.name}
+                      src={form.preview}
+                      alt={form.title}
                       className="h-full w-full object-cover"
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(20,24,16,0)_0%,rgba(20,24,16,0.88)_100%)] px-6 pb-6 pt-20 text-white">
@@ -485,10 +550,10 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                         ))}
                       </div>
                       <h3 className="mt-4 text-3xl font-black leading-tight">
-                        {form.malayalam_name || form.name}
+                        {form.titleMl || form.title}
                       </h3>
                       <p className="mt-2 text-sm font-medium text-white/80">
-                        {form.author_malayalam || form.author}
+                        {form.authorNameMl || form.authorName}
                       </p>
                     </div>
                   </div>

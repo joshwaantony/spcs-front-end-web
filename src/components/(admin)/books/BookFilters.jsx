@@ -9,34 +9,6 @@ const filterOptions = [
   { label: "Recently Added", value: "recent" },
 ];
 
-const formatDateForApi = (value) => {
-  if (!value) {
-    return "";
-  }
-
-  const [year, month, day] = value.split("-");
-
-  if (!year || !month || !day) {
-    return "";
-  }
-
-  return `${day}-${month}-${year}`;
-};
-
-const formatDateForInput = (value) => {
-  if (!value) {
-    return "";
-  }
-
-  const [day, month, year] = value.split("-");
-
-  if (!day || !month || !year) {
-    return "";
-  }
-
-  return `${year}-${month}-${day}`;
-};
-
 export default function BookFilters({
   activeTab = "all",
   onTabChange = () => {},
@@ -268,11 +240,9 @@ export default function BookFilters({
               </span>
               <input
                 type="date"
-                value={formatDateForInput(fromDate)}
-                max={formatDateForInput(toDate) || undefined}
-                onChange={(event) =>
-                  setFromDate(formatDateForApi(event.target.value))
-                }
+                value={fromDate}
+                max={toDate || undefined}
+                onChange={(event) => setFromDate(event.target.value)}
                 className="w-[132px] bg-transparent text-sm font-semibold text-[#141810] outline-none"
               />
             </label>
@@ -283,11 +253,9 @@ export default function BookFilters({
               </span>
               <input
                 type="date"
-                value={formatDateForInput(toDate)}
-                min={formatDateForInput(fromDate) || undefined}
-                onChange={(event) =>
-                  setToDate(formatDateForApi(event.target.value))
-                }
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => setToDate(event.target.value)}
                 className="w-[132px] bg-transparent text-sm font-semibold text-[#141810] outline-none"
               />
             </label>
