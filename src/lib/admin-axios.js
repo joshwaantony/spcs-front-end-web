@@ -1,5 +1,10 @@
 // spcs_web/lib/axios.js
 import axios from "axios";
+import {
+  clearStoredSession,
+  persistSession,
+  readStoredAccessToken,
+} from "@/lib/auth-session";
 
 /* -------------------------------------------
    BASE URL
@@ -11,7 +16,7 @@ const API_ORIGIN =
    AXIOS INSTANCE
 -------------------------------------------- */
 const api = axios.create({
-  baseURL: `${API_ORIGIN}/api`,
+  baseURL: `${API_ORIGIN}/api/v1`,
   timeout: 15000,
   withCredentials: true,
   headers: {
@@ -19,10 +24,25 @@ const api = axios.create({
   },
 });
 
-const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
-const USER_KEY = "spcs_auth_user";
-
 let refreshPromise = null;
+
+const isRefreshRequest = (url = "") =>
+  url === "/auth/refresh" ||
+  url === "/v1/auth/refresh" ||
+  url.endsWith("/auth/refresh") ||
+  url.endsWith("/v1/auth/refresh");
+
+const refreshClient = axios.create({
+  baseURL: `${API_ORIGIN}/api/v1`,
+  timeout: 15000,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+const isExpiredTokenMessage = (message = "") =>
+  /token expired|jwt expired|unauthorized|invalid token/i.test(message);
 
 const getReadableRequestError = (error, fallback = "Something went wrong. Please try again.") => {
   const message =
@@ -41,15 +61,64 @@ const getReadableRequestError = (error, fallback = "Something went wrong. Please
   return message;
 };
 
+const refreshAccessToken = async () => {
+  refreshPromise =
+    refreshPromise ||
+    refreshClient.post("/auth/refresh", {});
+
+  try {
+    const refreshResponse = await refreshPromise;
+    const refreshedData = refreshResponse.data;
+    const newToken =
+      refreshedData?.data?.accessToken ||
+      refreshedData?.data?.token ||
+      refreshedData?.accessToken;
+    const refreshedUser =
+      refreshedData?.data?.user ||
+      refreshedData?.user ||
+      null;
+
+    if (!newToken) {
+      throw new Error("Invalid refresh response");
+    }
+
+    persistSession({
+      accessToken: newToken,
+      user: refreshedUser || undefined,
+    });
+
+    api.defaults.headers.common.Authorization = `Bearer ${newToken}`;
+
+    return newToken;
+  } catch (refreshError) {
+    delete api.defaults.headers.common.Authorization;
+    clearStoredSession();
+    throw refreshError;
+  } finally {
+    refreshPromise = null;
+  }
+};
+
+const retryWithRefreshedToken = async (originalRequest) => {
+  originalRequest._retry = true;
+
+  const newToken = await refreshAccessToken();
+
+  originalRequest.headers = originalRequest.headers || {};
+  originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+  return api.request(originalRequest);
+};
+
 /* -------------------------------------------
    REQUEST INTERCEPTOR (Attach Token)
 -------------------------------------------- */
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== "undefined") {
-      const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+      const token = readStoredAccessToken();
 
-      if (token) {
+      if (token && !isRefreshRequest(config.url)) {
         config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -64,62 +133,21 @@ api.interceptors.request.use(
    RESPONSE INTERCEPTOR
 -------------------------------------------- */
 api.interceptors.response.use(
-  (response) => response.data,
-  async (error) => {
-    const originalRequest = error.config;
-    const shouldRefresh =
+  async (response) => {
+    const responseData = response.data;
+    const originalRequest = response.config;
+    const shouldRefreshFromBody =
       typeof window !== "undefined" &&
-      error.response?.status === 401 &&
       originalRequest &&
       !originalRequest._retry &&
-      originalRequest.url !== "/auth/refresh" &&
-      originalRequest.url !== "/v1/auth/refresh";
+      !isRefreshRequest(originalRequest.url) &&
+      responseData?.success === false &&
+      isExpiredTokenMessage(responseData?.message || "");
 
-    if (shouldRefresh) {
-      originalRequest._retry = true;
-
+    if (shouldRefreshFromBody) {
       try {
-        refreshPromise =
-          refreshPromise ||
-          axios.post(
-            `${API_ORIGIN}/api/v1/auth/refresh`,
-            {},
-            {
-              withCredentials: true,
-              headers: {
-                "Content-Type": "application/json",
-              },
-            }
-          );
-
-        const refreshResponse = await refreshPromise;
-        const refreshedData = refreshResponse.data;
-        const newToken =
-          refreshedData?.data?.accessToken ||
-          refreshedData?.data?.token ||
-          refreshedData?.accessToken;
-        const refreshedUser =
-          refreshedData?.data?.user ||
-          refreshedData?.user ||
-          null;
-
-        if (!newToken) {
-          throw new Error("Invalid refresh response");
-        }
-
-        localStorage.setItem(ACCESS_TOKEN_KEY, newToken);
-
-        if (refreshedUser) {
-          localStorage.setItem(USER_KEY, JSON.stringify(refreshedUser));
-        }
-
-        originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-
-        return api(originalRequest);
+        return await retryWithRefreshedToken(originalRequest);
       } catch (refreshError) {
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-
         const message = getReadableRequestError(
           refreshError,
           "Session expired"
@@ -130,8 +158,35 @@ api.interceptors.response.use(
           message,
           data: refreshError.response?.data,
         });
-      } finally {
-        refreshPromise = null;
+      }
+    }
+
+    return responseData;
+  },
+  async (error) => {
+    const originalRequest = error.config;
+    const shouldRefresh =
+      typeof window !== "undefined" &&
+      (error.response?.status === 401 ||
+        isExpiredTokenMessage(error.response?.data?.message || error.message || "")) &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !isRefreshRequest(originalRequest.url);
+
+    if (shouldRefresh) {
+      try {
+        return await retryWithRefreshedToken(originalRequest);
+      } catch (refreshError) {
+        const message = getReadableRequestError(
+          refreshError,
+          "Session expired"
+        );
+
+        return Promise.reject({
+          status: refreshError.response?.status || 401,
+          message,
+          data: refreshError.response?.data,
+        });
       }
     }
 

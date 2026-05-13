@@ -5,42 +5,49 @@ import { HiX } from "react-icons/hi";
 import { useBooksStore } from "@/store/admin/books/books.store";
 import { useCategoryStore } from "@/store/admin/books/category.store";
 import { useToastStore } from "@/store/ui/toast.store";
+import {
+  ASSET_TYPES,
+  formatFileSize,
+  validateAssetFile,
+} from "@/services/admin/media/media.constants";
+import { uploadMediaAsset } from "@/services/admin/media/media.api";
 
 const initialForm = {
-  name: "",
-  author: "",
+  title: "",
+  authorName: "",
   category: "",
-  type: "HARD_COPY",
+  type: "PAPERBACK",
   price: "",
-  malayalam_name: "",
-  author_malayalam: "",
-  best_seller: false,
+  titleMl: "",
+  authorNameMl: "",
+  isBestsellerManual: false,
   description: "",
   edition: "",
   isbn: "",
-  num_of_pages: "",
-  publisher: "",
-  language: "",
-  discount: "",
-  status: "ACTIVE",
-  award_winner: false,
-  new_arrival: false,
-  republication: false,
-  highlight: false,
-  rank: "",
+  pages: "",
+  publisherId: "",
+  languageCode: "",
+  discountAmount: "0",
+  sku: "",
+  status: "DRAFT",
+  isAwardWinner: false,
+  isNewArrival: false,
+  isPrePublication: false,
+  isFeatured: false,
+  rankOrder: "",
   unlimited_stock: false,
   stock: "0",
   cover_image: null,
   cover_img_preview_url: "",
-  cover_image_url: "",
+  coverMediaId: "",
 };
 
 const booleanFieldGroups = [
-  { key: "best_seller", label: "Best Seller" },
-  { key: "award_winner", label: "Award Winner" },
-  { key: "new_arrival", label: "New Arrival" },
-  { key: "republication", label: "Republication" },
-  { key: "highlight", label: "Highlight" },
+  { key: "isBestsellerManual", label: "Best Seller" },
+  { key: "isAwardWinner", label: "Award Winner" },
+  { key: "isNewArrival", label: "New Arrival" },
+  { key: "isPrePublication", label: "Pre Publication" },
+  { key: "isFeatured", label: "Featured" },
   { key: "unlimited_stock", label: "Unlimited Stock" },
 ];
 
@@ -53,6 +60,7 @@ const selectClassName =
 export default function BookCreateModal({ isOpen, onClose }) {
   const [form, setForm] = useState(initialForm);
   const [successMessage, setSuccessMessage] = useState("");
+  const [uploadingCover, setUploadingCover] = useState(false);
   const fileInputRef = useRef(null);
   const showToast = useToastStore((state) => state.showToast);
   const {
@@ -65,6 +73,7 @@ export default function BookCreateModal({ isOpen, onClose }) {
     creating,
     createError,
     createBook,
+    updateBook,
     fetchBooks,
     resetCreateBookState,
   } = useBooksStore();
@@ -78,6 +87,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
     () => booleanFieldGroups.filter(({ key }) => form[key]),
     [form]
   );
+  const isSubmitting = creating || uploadingCover;
+  const selectedCoverFileName = form.cover_image?.name || "";
 
   useEffect(() => {
     if (isOpen) {
@@ -101,7 +112,7 @@ export default function BookCreateModal({ isOpen, onClose }) {
   }
 
   const handleClose = () => {
-    if (creating) {
+    if (isSubmitting) {
       return;
     }
 
@@ -117,7 +128,7 @@ export default function BookCreateModal({ isOpen, onClose }) {
     setForm((current) => ({
       ...current,
       [name]: type === "checkbox" ? checked : value,
-      ...(name === "cover_image_url"
+      ...(name === "cover_img_preview_url"
         ? {
             cover_img_preview_url: value || current.cover_img_preview_url,
           }
@@ -129,6 +140,20 @@ export default function BookCreateModal({ isOpen, onClose }) {
     const file = event.target.files?.[0];
 
     if (!file) {
+      return;
+    }
+
+    try {
+      validateAssetFile({
+        file,
+        assetType: ASSET_TYPES.BOOK_COVER,
+      });
+    } catch (error) {
+      event.target.value = "";
+      showToast({
+        type: "error",
+        message: error?.message || "Invalid cover image.",
+      });
       return;
     }
 
@@ -153,56 +178,87 @@ export default function BookCreateModal({ isOpen, onClose }) {
     setSuccessMessage("");
     const selectedCategory = form.category.trim();
     const normalizedPrice = Number(form.price);
-    const normalizedPages = Number(form.num_of_pages);
+    const normalizedPages = Number(form.pages);
     const normalizedRank =
-      form.rank.trim() === "" ? 0 : Number(form.rank);
+      form.rankOrder.trim() === "" ? 0 : Number(form.rankOrder);
     const normalizedStock = form.unlimited_stock
       ? 0
       : Number(form.stock);
+    const normalizedDiscountAmount = Number(form.discountAmount);
 
-    const normalizedPayload = {
-      name: form.name.trim(),
-      author: form.author.trim(),
-      category: selectedCategory,
-      type: form.type,
-      price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
-      malayalam_name: form.malayalam_name.trim(),
-      author_malayalam: form.author_malayalam.trim(),
-      best_seller: form.best_seller,
-      description: form.description.trim(),
-      edition: form.edition.trim(),
-      isbn: form.isbn.trim(),
-      num_of_pages: Number.isFinite(normalizedPages) ? normalizedPages : 0,
-      publisher: form.publisher.trim(),
-      language: form.language.trim(),
-      discount: form.discount.trim(),
+    const payload = {
+      title: form.title.trim(),
+      titleMl: form.titleMl.trim() || undefined,
+      authorName: form.authorName.trim() || undefined,
+      authorNameMl: form.authorNameMl.trim() || undefined,
+      description: form.description.trim() || undefined,
+      edition: form.edition.trim() || undefined,
+      pages: Number.isFinite(normalizedPages) ? normalizedPages : undefined,
+      languageCode: form.languageCode.trim() || undefined,
       status: form.status,
-      award_winner: form.award_winner,
-      new_arrival: form.new_arrival,
-      republication: form.republication,
-      highlight: form.highlight,
-      rank: Number.isFinite(normalizedRank) ? normalizedRank : 0,
-      unlimited_stock: form.unlimited_stock,
-      stock: Number.isFinite(normalizedStock) ? normalizedStock : 0,
-      cover_image_url: form.cover_image_url.trim(),
+      rankOrder: Number.isFinite(normalizedRank) ? normalizedRank : 0,
+      isBestsellerManual: form.isBestsellerManual,
+      isFeatured: form.isFeatured,
+      isAwardWinner: form.isAwardWinner,
+      isNewArrival: form.isNewArrival,
+      isPrePublication: form.isPrePublication,
+      publisherId: form.publisherId.trim() || undefined,
+      coverMediaId:
+        form.cover_image || !form.coverMediaId.trim()
+          ? undefined
+          : form.coverMediaId.trim(),
+      categoryIds: selectedCategory ? [selectedCategory] : [],
+      formats: [
+        {
+          type: form.type,
+          price: Number.isFinite(normalizedPrice) ? normalizedPrice : 0,
+          discountAmount: Number.isFinite(normalizedDiscountAmount)
+            ? normalizedDiscountAmount
+            : 0,
+          sku: form.sku.trim() || undefined,
+          isbn: form.isbn.trim() || undefined,
+          hasUnlimitedStock: form.unlimited_stock,
+          stockCount: Number.isFinite(normalizedStock) ? normalizedStock : 0,
+          isDigitalEnabled: form.type === "EBOOK",
+          drmEnabled: form.type === "EBOOK",
+          isActive: true,
+        },
+      ],
     };
-
-    const payload = form.cover_image
-      ? (() => {
-          const formData = new FormData();
-
-          Object.entries(normalizedPayload).forEach(([key, value]) => {
-            formData.append(key, String(value));
-          });
-
-          formData.append("cover_image", form.cover_image);
-
-          return formData;
-        })()
-      : normalizedPayload;
 
     try {
       const res = await createBook(payload);
+      const createdBookId = res?.data?.id || res?.data?.book_id;
+      let coverUploadWarning = "";
+
+      if (form.cover_image) {
+        if (!createdBookId) {
+          coverUploadWarning =
+            "Book created, but cover upload was skipped because the book ID was not returned.";
+        } else {
+          setUploadingCover(true);
+
+          try {
+            const uploadedCover = await uploadMediaAsset({
+              file: form.cover_image,
+              assetType: ASSET_TYPES.BOOK_COVER,
+              entityId: createdBookId,
+              altText: form.title.trim() || undefined,
+            });
+
+            await updateBook(createdBookId, {
+              coverMediaId: uploadedCover.mediaId,
+            });
+          } catch (error) {
+            coverUploadWarning =
+              error?.message ||
+              "Book created, but attaching the uploaded cover failed.";
+          } finally {
+            setUploadingCover(false);
+          }
+        }
+      }
+
       await fetchBooks({
         filter,
         page,
@@ -211,10 +267,17 @@ export default function BookCreateModal({ isOpen, onClose }) {
         fromDate,
         toDate,
       });
-      setSuccessMessage(res?.message || "Book created successfully.");
+
+      const successText = coverUploadWarning
+        ? `Book created successfully. ${coverUploadWarning}`
+        : form.cover_image
+          ? "Book created and cover uploaded successfully."
+          : res?.message || "Book created successfully.";
+
+      setSuccessMessage(successText);
       showToast({
-        type: "success",
-        message: res?.message || "Book created successfully.",
+        type: coverUploadWarning ? "error" : "success",
+        message: successText,
       });
 
       window.setTimeout(() => {
@@ -224,7 +287,12 @@ export default function BookCreateModal({ isOpen, onClose }) {
         onClose();
       }, 1000);
     } catch (error) {
+      setUploadingCover(false);
       console.error("Create book failed:", error);
+      showToast({
+        type: "error",
+        message: error?.message || "Failed to create book.",
+      });
     }
   };
 
@@ -285,12 +353,12 @@ export default function BookCreateModal({ isOpen, onClose }) {
                           Upload cover image
                         </span>
                         <span className="mt-1 block text-xs text-[#6B7280]">
-                          PNG, JPG, or WEBP. File select cheythal `cover_image`
-                          aayi submit cheyyum.
+                          PNG, JPG, or WEBP up to 5 MB. The cover is uploaded
+                          automatically after the book is created.
                         </span>
                         {form.cover_image && (
                           <span className="mt-2 block text-[11px] font-medium text-[#496619]">
-                            {form.cover_image.name}
+                            {selectedCoverFileName} ({formatFileSize(form.cover_image.size)})
                           </span>
                         )}
                       </span>
@@ -300,8 +368,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field label="Book Name">
                       <input
-                        name="name"
-                        value={form.name}
+                        name="title"
+                        value={form.title}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -309,8 +377,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
 
                     <Field label="Author">
                       <input
-                        name="author"
-                        value={form.author}
+                        name="authorName"
+                        value={form.authorName}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -318,8 +386,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
 
                     <Field label="Malayalam Name">
                       <input
-                        name="malayalam_name"
-                        value={form.malayalam_name}
+                        name="titleMl"
+                        value={form.titleMl}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -327,8 +395,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
 
                     <Field label="Author in Malayalam">
                       <input
-                        name="author_malayalam"
-                        value={form.author_malayalam}
+                        name="authorNameMl"
+                        value={form.authorNameMl}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -377,16 +445,17 @@ export default function BookCreateModal({ isOpen, onClose }) {
                         onChange={handleInputChange}
                         className={selectClassName}
                       >
-                        <option value="HARD_COPY">Hard Copy</option>
+                        <option value="PAPERBACK">Paperback</option>
+                        <option value="HARDCOVER">Hardcover</option>
                         <option value="EBOOK">Ebook</option>
-                        <option value="AUDIO_BOOK">Audiobook</option>
+                        <option value="AUDIO">Audiobook</option>
                       </select>
                     </Field>
 
                     <Field label="Language">
                       <input
-                        name="language"
-                        value={form.language}
+                        name="languageCode"
+                        value={form.languageCode}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -399,9 +468,11 @@ export default function BookCreateModal({ isOpen, onClose }) {
                         onChange={handleInputChange}
                         className={selectClassName}
                       >
-                        <option value="ACTIVE">Active</option>
-                        <option value="INACTIVE">Inactive</option>
                         <option value="DRAFT">Draft</option>
+                        <option value="PUBLISHED">Published</option>
+                        <option value="ARCHIVED">Archived</option>
+                        <option value="OUT_OF_STOCK">Out of Stock</option>
+                        <option value="DISCONTINUED">Discontinued</option>
                       </select>
                     </Field>
                   </div>
@@ -417,10 +488,10 @@ export default function BookCreateModal({ isOpen, onClose }) {
                       />
                     </Field>
 
-                    <Field label="Discount ID">
+                    <Field label="Discount Amount">
                       <input
-                        name="discount"
-                        value={form.discount}
+                        name="discountAmount"
+                        value={form.discountAmount}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -429,8 +500,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
                     <Field label="Rank">
                       <input
                         type="number"
-                        name="rank"
-                        value={form.rank}
+                        name="rankOrder"
+                        value={form.rankOrder}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -470,8 +541,8 @@ export default function BookCreateModal({ isOpen, onClose }) {
                     <Field label="Pages">
                       <input
                         type="number"
-                        name="num_of_pages"
-                        value={form.num_of_pages}
+                        name="pages"
+                        value={form.pages}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
@@ -479,18 +550,27 @@ export default function BookCreateModal({ isOpen, onClose }) {
 
                     <Field label="Publisher">
                       <input
-                        name="publisher"
-                        value={form.publisher}
+                        name="publisherId"
+                        value={form.publisherId}
                         onChange={handleInputChange}
                         className={inputClassName}
                       />
                     </Field>
                   </div>
 
-                  <Field label="Cover Image URL">
+                  <Field label="SKU">
                     <input
-                      name="cover_image_url"
-                      value={form.cover_image_url}
+                      name="sku"
+                      value={form.sku}
+                      onChange={handleInputChange}
+                      className={inputClassName}
+                    />
+                  </Field>
+
+                  <Field label="Cover Preview URL">
+                    <input
+                      name="cover_img_preview_url"
+                      value={form.cover_img_preview_url}
                       onChange={handleInputChange}
                       placeholder="http://localhost:5000/uploads/books/randamoozham-cover.jpg"
                       className={inputClassName}
@@ -557,17 +637,21 @@ export default function BookCreateModal({ isOpen, onClose }) {
                     <button
                       type="button"
                       onClick={handleClose}
-                      disabled={creating}
+                      disabled={isSubmitting}
                       className="h-12 rounded-full border border-gray-200 bg-white px-6 text-sm font-bold text-[#4B5563] transition hover:bg-gray-50"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      disabled={creating}
+                      disabled={isSubmitting}
                       className="h-12 rounded-full bg-[#46EC12] px-6 text-sm font-black text-[#141810] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {creating ? "Creating..." : "Create Book"}
+                      {creating
+                        ? "Creating book..."
+                        : uploadingCover
+                          ? "Uploading cover..."
+                          : "Create Book"}
                     </button>
                   </div>
                 </form>
@@ -580,10 +664,10 @@ export default function BookCreateModal({ isOpen, onClose }) {
 
                 <div className="mt-5 overflow-hidden rounded-[30px] border border-[#dfe7d5] bg-white shadow-[0_24px_70px_-32px_rgba(20,24,16,0.35)]">
                   <div className="relative aspect-[4/5] bg-[#eef3e8]">
-                    {form.cover_img_preview_url || form.cover_image_url ? (
+                    {form.cover_img_preview_url ? (
                       <img
-                        src={form.cover_img_preview_url || form.cover_image_url}
-                        alt={form.name}
+                        src={form.cover_img_preview_url}
+                        alt={form.title}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -604,10 +688,10 @@ export default function BookCreateModal({ isOpen, onClose }) {
                         ))}
                       </div>
                       <h3 className="mt-4 text-3xl font-black leading-tight">
-                        {form.malayalam_name || form.name}
+                        {form.titleMl || form.title}
                       </h3>
                       <p className="mt-2 text-sm font-medium text-white/80">
-                        {form.author_malayalam || form.author}
+                        {form.authorNameMl || form.authorName}
                       </p>
                     </div>
                   </div>
@@ -619,10 +703,10 @@ export default function BookCreateModal({ isOpen, onClose }) {
                           Catalogue card
                         </p>
                         <h4 className="mt-2 text-2xl font-black text-[#141810]">
-                          {form.name}
+                          {form.title}
                         </h4>
                         <p className="mt-1 text-sm font-semibold text-[#6B7280]">
-                          {form.author}
+                          {form.authorName}
                         </p>
                       </div>
                       <div className="rounded-[20px] bg-[#141810] px-4 py-3 text-right text-white">
@@ -640,9 +724,9 @@ export default function BookCreateModal({ isOpen, onClose }) {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <PreviewStat label="Edition" value={form.edition} />
                       <PreviewStat label="ISBN" value={form.isbn} />
-                      <PreviewStat label="Publisher" value={form.publisher} />
-                      <PreviewStat label="Pages" value={form.num_of_pages} />
-                      <PreviewStat label="Language" value={form.language} />
+                      <PreviewStat label="Publisher" value={form.publisherId} />
+                      <PreviewStat label="Pages" value={form.pages} />
+                      <PreviewStat label="Language" value={form.languageCode} />
                       <PreviewStat
                         label="Availability"
                         value={

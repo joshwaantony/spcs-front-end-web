@@ -124,9 +124,13 @@ import {
   requestOtp,
   verifyOtp,
 } from "@/services/auth/auth.api";
-
-const ACCESS_TOKEN_KEY = "spcs_admin_token_key_prod";
-const USER_KEY = "spcs_auth_user";
+import {
+  AUTH_SESSION_EVENT,
+  clearStoredSession,
+  persistSession,
+  readStoredAccessToken,
+  readStoredUser,
+} from "@/lib/auth-session";
 
 const getAccessTokenFromResponse = (data) =>
   data?.data?.accessToken || data?.data?.token || data?.accessToken || null;
@@ -139,47 +143,9 @@ const normalizeSessionFromResponse = (data) => ({
   user: getUserFromResponse(data),
 });
 
-const persistSession = ({ accessToken, user }) => {
-  if (typeof window === "undefined") {
-    return;
-  }
+const clearSession = () => clearStoredSession();
 
-  if (accessToken) {
-    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  }
-
-  if (user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-  }
-};
-
-const readStoredUser = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  const rawUser = localStorage.getItem(USER_KEY);
-
-  if (!rawUser) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(rawUser);
-  } catch {
-    localStorage.removeItem(USER_KEY);
-    return null;
-  }
-};
-
-const clearSession = () => {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-};
+let authSessionListenerAttached = false;
 
 export const useAdminAuthStore = create((set, get) => ({
   user: null,
@@ -238,11 +204,29 @@ export const useAdminAuthStore = create((set, get) => ({
     }
 
     try {
+      if (typeof window !== "undefined" && !authSessionListenerAttached) {
+        window.addEventListener(AUTH_SESSION_EVENT, (event) => {
+          const detail = event?.detail || {};
+
+          if (detail.type === "cleared") {
+            set({
+              user: null,
+              isAuthenticated: false,
+            });
+            return;
+          }
+
+          set({
+            user: detail.user || readStoredUser(),
+            isAuthenticated: !!(detail.accessToken || readStoredAccessToken()),
+          });
+        });
+
+        authSessionListenerAttached = true;
+      }
+
       const storedUser = readStoredUser();
-      const existingToken =
-        typeof window !== "undefined"
-          ? localStorage.getItem(ACCESS_TOKEN_KEY)
-          : null;
+      const existingToken = readStoredAccessToken();
 
       if (storedUser || existingToken) {
         set({
@@ -267,11 +251,17 @@ export const useAdminAuthStore = create((set, get) => ({
             isAuthenticated: true,
           });
         }
-      } catch {}
+      } catch {
+        clearSession();
+        set({
+          user: null,
+          isAuthenticated: false,
+        });
+      }
 
       if (
         typeof window !== "undefined" &&
-        localStorage.getItem(ACCESS_TOKEN_KEY)
+        readStoredAccessToken()
       ) {
         if (!get().user) {
           await get().fetchMe();
@@ -427,10 +417,7 @@ export const useAdminAuthStore = create((set, get) => ({
   },
 
   initAuth: () => {
-    const token =
-      typeof window !== "undefined"
-        ? localStorage.getItem(ACCESS_TOKEN_KEY)
-        : null;
+    const token = readStoredAccessToken();
     const user = readStoredUser();
 
     set({
