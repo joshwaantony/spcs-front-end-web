@@ -995,38 +995,13 @@ export default function BookEditModal({ isOpen, book, onClose }) {
                     title="Assign book categories"
                     description="Keep this book discoverable across all relevant category collections."
                   >
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      {categories.map((category) => {
-                        const categoryId = category.id || category.category_id;
-                        const selected = form.categoryIds.includes(categoryId);
-
-                        return (
-                          <button
-                            key={categoryId}
-                            type="button"
-                            onClick={() => handleCategoryToggle(categoryId)}
-                            className={`rounded-[22px] border px-4 py-4 text-left transition ${
-                              selected
-                                ? "border-[#cfe4b2] bg-[#f4fbe8]"
-                                : "border-[#e5ebdf] bg-white hover:border-[#d5e6c0]"
-                            }`}
-                          >
-                            <p className="text-sm font-bold text-[#141810]">
-                              {category.name}
-                            </p>
-                            <p className="mt-1 text-xs font-medium text-[#6b7280]">
-                              {selected ? "Selected" : "Tap to add"}
-                            </p>
-                          </button>
-                        );
-                      })}
-
-                      {!categoryLoading && categories.length === 0 && (
-                        <div className="rounded-[22px] border border-[#e5ebdf] bg-white px-4 py-4 text-sm font-medium text-[#6b7280]">
-                          No categories available yet.
-                        </div>
-                      )}
-                    </div>
+                    <CategoryDropdown
+                      categories={categories}
+                      selectedCategoryIds={form.categoryIds}
+                      onToggleCategory={handleCategoryToggle}
+                      loading={categoryLoading}
+                      emptyMessage="No categories available yet."
+                    />
                   </SectionCard>
 
                   <SectionCard
@@ -1539,5 +1514,105 @@ function StatusPill({ label, tone }) {
     >
       {label}
     </span>
+  );
+}
+
+function CategoryDropdown({
+  categories,
+  selectedCategoryIds,
+  onToggleCategory,
+  loading,
+  emptyMessage,
+}) {
+  const selectedCount = selectedCategoryIds.length;
+
+  return (
+    <div className="rounded-[26px] border border-[#dce8cd] bg-[#fbfdf7] p-4">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-[20px] border border-[#e5ebdf] bg-white px-4 py-4 transition hover:border-[#d5e6c0]">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-[#141810]">
+              {selectedCount > 0
+                ? `${selectedCount} categor${selectedCount === 1 ? "y" : "ies"} selected`
+                : "Select categories"}
+            </p>
+            <p className="mt-1 text-xs font-medium text-[#6b7280]">
+              {selectedCount > 0
+                ? "Open to update the selected categories."
+                : "Choose one or more categories from the list."}
+            </p>
+          </div>
+          <span className="text-lg text-[#6b7280] transition group-open:rotate-180">
+            ▾
+          </span>
+        </summary>
+
+        {selectedCount > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {categories
+              .filter((category) =>
+                selectedCategoryIds.includes(category.id || category.category_id)
+              )
+              .map((category) => {
+                const categoryId = category.id || category.category_id;
+
+                return (
+                  <button
+                    key={categoryId}
+                    type="button"
+                    onClick={() => onToggleCategory(categoryId)}
+                    className="rounded-full border border-[#cfe4b2] bg-[#f4fbe8] px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[#496619] transition hover:border-[#b9db8a]"
+                  >
+                    {category.name}
+                  </button>
+                );
+              })}
+          </div>
+        ) : null}
+
+        <div className="mt-4 space-y-2">
+          {loading ? (
+            <div className="rounded-[20px] border border-[#e5ebdf] bg-white px-4 py-4 text-sm font-medium text-[#6b7280]">
+              Loading categories...
+            </div>
+          ) : categories.length > 0 ? (
+            categories.map((category) => {
+              const categoryId = category.id || category.category_id;
+              const selected = selectedCategoryIds.includes(categoryId);
+
+              return (
+                <label
+                  key={categoryId}
+                  className={`flex cursor-pointer items-center justify-between rounded-[20px] border px-4 py-4 transition ${
+                    selected
+                      ? "border-[#cfe4b2] bg-[#f4fbe8]"
+                      : "border-[#e5ebdf] bg-white hover:border-[#d5e6c0]"
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[#141810]">
+                      {category.name}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-[#6b7280]">
+                      {selected ? "Selected" : "Tap to add"}
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => onToggleCategory(categoryId)}
+                    className="h-5 w-5 rounded border-[#c9d7b6] text-[#46EC12] focus:ring-[#46EC12]/30"
+                  />
+                </label>
+              );
+            })
+          ) : (
+            <div className="rounded-[20px] border border-[#e5ebdf] bg-white px-4 py-4 text-sm font-medium text-[#6b7280]">
+              {emptyMessage}
+            </div>
+          )}
+        </div>
+      </details>
+    </div>
   );
 }

@@ -1,9 +1,11 @@
 import CatalogPageShell from "@/components/(user)/book-store/CatalogPageShell";
 
-export default function EbookPage({ searchParams }) {
+export default async function EbookPage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+
   return (
     <CatalogPageShell
-      searchParams={searchParams}
+      searchParams={resolvedSearchParams}
       basePath="/e-book"
       currentPathLabel="E-Book"
       title="Instant reads for every screen"

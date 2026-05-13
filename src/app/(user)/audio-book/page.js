@@ -1,9 +1,11 @@
 import CatalogPageShell from "@/components/(user)/book-store/CatalogPageShell";
 
-export default function AudioBookPage({ searchParams }) {
+export default async function AudioBookPage({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+
   return (
     <CatalogPageShell
-      searchParams={searchParams}
+      searchParams={resolvedSearchParams}
       basePath="/audio-book"
       currentPathLabel="Audiobook"
       title="Stories designed for listening"
