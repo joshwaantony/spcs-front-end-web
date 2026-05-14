@@ -1,3 +1,4 @@
+import axios from "axios";
 import api from "@/lib/admin-axios";
 import { validateAssetFile } from "@/services/admin/media/media.constants";
 
@@ -55,36 +56,30 @@ export const uploadFileToSignedUrl = async ({
     typeof uploadFields === "object" &&
     Object.keys(uploadFields).length > 0;
 
-  const response = hasUploadFields
-    ? await (() => {
-        const formData = new FormData();
+  try {
+    if (hasUploadFields) {
+      const formData = new FormData();
 
-        Object.entries(uploadFields).forEach(([key, value]) => {
-          formData.append(key, value);
-        });
-
-        formData.append("file", file);
-
-        return fetch(uploadUrl, {
-          method: "POST",
-          body: formData,
-          signal,
-        });
-      })()
-    : await fetch(uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
-        signal,
+      Object.entries(uploadFields).forEach(([key, value]) => {
+        formData.append(key, value);
       });
 
-  if (!response.ok) {
+      formData.append("file", file);
+
+      return await axios.post(uploadUrl, formData, {
+        signal,
+      });
+    }
+
+    return await axios.put(uploadUrl, file, {
+      signal,
+      headers: {
+        "Content-Type": file.type,
+      },
+    });
+  } catch {
     throw new Error("File upload failed.");
   }
-
-  return response;
 };
 
 export const uploadToS3 = async (uploadUrl, uploadFields, file, signal) =>

@@ -22,12 +22,41 @@ import {
 
 const DEFAULT_OPEN_SECTIONS = {
   search: true,
-  format: true,
+  availability: false,
+  curated: false,
   category: true,
-  budget: true,
-  language: true,
-  availability: true,
-  curated: true,
+  format: false,
+  budget: false,
+  language: false,
+};
+
+const getShelfPathForFormat = (formatType) => {
+  if (formatType === "EBOOK") {
+    return "/e-book";
+  }
+
+  if (formatType === "AUDIO") {
+    return "/audio-book";
+  }
+
+  return "/book-store";
+};
+
+const buildFormatShelfHref = (currentQuery, formatType, active) => {
+  const targetBasePath = getShelfPathForFormat(formatType);
+  const nextQuery = {
+    ...currentQuery,
+    page: 1,
+    isDigital: undefined,
+  };
+
+  if (targetBasePath === "/book-store") {
+    nextQuery.formatType = active ? undefined : formatType;
+  } else {
+    nextQuery.formatType = undefined;
+  }
+
+  return buildCatalogHref(targetBasePath, nextQuery);
 };
 
 export default function SidebarFilters({
@@ -65,18 +94,17 @@ export default function SidebarFilters({
   return (
     <aside className="w-full self-start lg:sticky lg:top-28 lg:w-[270px]">
       <div className="rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_18px_50px_-32px_rgba(15,23,42,0.2)]">
-        <div className="mb-6 rounded-[22px] bg-[linear-gradient(135deg,#f7faff_0%,#eef4ff_100%)] p-4">
+        <div className="mb-5 rounded-[22px] bg-[linear-gradient(135deg,#f7faff_0%,#eef4ff_100%)] p-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#126DEC] shadow-[0_12px_20px_-16px_rgba(18,109,236,0.8)]">
                 <SlidersHorizontal size={18} />
               </div>
-              <h3 className="mt-3 text-[24px] font-black leading-none text-[#1a2230]">
-                Refine Your Shelf
+              <h3 className="mt-3 text-[22px] font-black leading-none text-[#1a2230]">
+                More filters
               </h3>
               <p className="mt-2 text-sm font-medium leading-6 text-[#6b7d96]">
-                Start with a title, then narrow by format, budget, language, or
-                availability.
+                Use these deeper filters after trying the quick shortcuts above.
               </p>
             </div>
           </div>
@@ -148,163 +176,6 @@ export default function SidebarFilters({
           </form>
         </AccordionSection>
 
-        {!lockedFormatType ? (
-          <AccordionSection
-            title="Choose a format"
-            description="Pick the edition that suits how you want to read."
-            icon={<PackageCheck size={14} />}
-            isOpen={openSections.format}
-            onToggle={() => toggleSection("format")}
-          >
-            <div className="flex flex-wrap gap-2">
-              {FORMAT_FILTERS.filter((format) =>
-                Array.isArray(allowedFormats) && allowedFormats.length > 0
-                  ? allowedFormats.includes(format.key)
-                  : true
-              ).map((format) => {
-                const active = activeFormatType === format.key;
-
-                return (
-                  <Link
-                    key={format.key}
-                    href={
-                      active
-                        ? buildCatalogHref(basePath, currentQuery, {
-                            formatType: undefined,
-                            page: 1,
-                          })
-                        : buildCatalogHref(basePath, currentQuery, {
-                            formatType: format.key,
-                            page: 1,
-                          })
-                    }
-                    className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                      active
-                        ? "bg-slate-950 text-white"
-                        : "border border-[#edf1f7] bg-white text-slate-600 hover:border-[#c8d7f2] hover:text-slate-900"
-                    }`}
-                  >
-                    {format.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </AccordionSection>
-        ) : (
-          <div className="mb-4 rounded-[20px] bg-[#126DEC] px-4 py-4 text-white shadow-[0_16px_40px_-28px_rgba(18,109,236,0.8)]">
-            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
-              Curated Format
-            </p>
-            <p className="mt-2 text-base font-black">{activeFormatType}</p>
-            <p className="mt-1 text-sm font-medium text-white/70">
-              This page is already focused on this reading format, so you can
-              browse faster.
-            </p>
-          </div>
-        )}
-
-        <AccordionSection
-          title="Browse by category"
-          description="Jump straight into the kind of books you want."
-          icon={<Sparkles size={14} />}
-          isOpen={openSections.category}
-          onToggle={() => toggleSection("category")}
-        >
-          <div className="flex flex-col gap-2">
-            {categories.slice(0, 8).map((category) => {
-              const active = activeCategoryId === category.id;
-
-              return (
-                <Link
-                  key={category.id}
-                  href={
-                    active
-                      ? buildCatalogHref(basePath, currentQuery, {
-                          categoryId: undefined,
-                          page: 1,
-                        })
-                      : buildCatalogHref(basePath, currentQuery, {
-                          categoryId: category.id,
-                          page: 1,
-                        })
-                  }
-                  className={`flex items-center justify-between rounded-[16px] px-4 py-3 text-sm font-semibold transition ${
-                    active
-                      ? "bg-[#126DEC] text-white"
-                      : "text-[#617289] hover:bg-[#f7faff] hover:text-slate-900"
-                  }`}
-                >
-                  <span>{category.name}</span>
-                  {active ? <X size={14} /> : <Sparkles size={14} />}
-                </Link>
-              );
-            })}
-          </div>
-        </AccordionSection>
-
-        <AccordionSection
-          title="Set your budget"
-          description="Show books within the price range you want."
-          icon={<BadgeIndianRupee size={14} />}
-          isOpen={openSections.budget}
-          onToggle={() => toggleSection("budget")}
-        >
-          <form action={basePath} className="space-y-3">
-            <input type="hidden" name="page" value="1" />
-            <PersistedQueryInputs
-              currentQuery={currentQuery}
-              excludeKeys={["minPrice", "maxPrice"]}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number"
-                min="0"
-                name="minPrice"
-                defaultValue={currentQuery.minPrice}
-                placeholder="₹0"
-                className="h-11 rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold text-slate-800 outline-none focus:border-[#126DEC]"
-              />
-              <input
-                type="number"
-                min="0"
-                name="maxPrice"
-                defaultValue={currentQuery.maxPrice}
-                placeholder="₹2000"
-                className="h-11 rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold text-slate-800 outline-none focus:border-[#126DEC]"
-              />
-            </div>
-            <button className="w-full rounded-full border border-[#cfe0ff] bg-white py-2.5 text-sm font-bold text-[#126DEC] transition hover:border-[#126DEC] hover:bg-[#f3f8ff]">
-              Update price range
-            </button>
-          </form>
-        </AccordionSection>
-
-        <AccordionSection
-          title="Choose a language"
-          description="Filter by language code like EN or ML."
-          icon={<Languages size={14} />}
-          isOpen={openSections.language}
-          onToggle={() => toggleSection("language")}
-        >
-          <form action={basePath} className="space-y-3">
-            <input type="hidden" name="page" value="1" />
-            <PersistedQueryInputs
-              currentQuery={currentQuery}
-              excludeKeys={["languageCode"]}
-            />
-            <input
-              type="text"
-              name="languageCode"
-              defaultValue={currentQuery.languageCode}
-              placeholder="EN, ML..."
-              className="h-11 w-full rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold uppercase text-slate-800 outline-none focus:border-[#126DEC]"
-            />
-            <button className="w-full rounded-full border border-[#cfe0ff] bg-white py-2.5 text-sm font-bold text-[#126DEC] transition hover:border-[#126DEC] hover:bg-[#f3f8ff]">
-              Update language
-            </button>
-          </form>
-        </AccordionSection>
-
         <AccordionSection
           title="Ready to buy"
           description="Show books that match how and when you want to order."
@@ -373,6 +244,153 @@ export default function SidebarFilters({
               );
             })}
           </div>
+        </AccordionSection>
+
+        <AccordionSection
+          title="Browse by category"
+          description="Jump straight into the kind of books you want."
+          icon={<Sparkles size={14} />}
+          isOpen={openSections.category}
+          onToggle={() => toggleSection("category")}
+        >
+          <div className="flex flex-col gap-2">
+            {categories.slice(0, 8).map((category) => {
+              const active = activeCategoryId === category.id;
+
+              return (
+                <Link
+                  key={category.id}
+                  href={
+                    active
+                      ? buildCatalogHref(basePath, currentQuery, {
+                          categoryId: undefined,
+                          page: 1,
+                        })
+                      : buildCatalogHref(basePath, currentQuery, {
+                          categoryId: category.id,
+                          page: 1,
+                        })
+                  }
+                  className={`flex items-center justify-between rounded-[16px] px-4 py-3 text-sm font-semibold transition ${
+                    active
+                      ? "bg-[#126DEC] text-white"
+                      : "text-[#617289] hover:bg-[#f7faff] hover:text-slate-900"
+                  }`}
+                >
+                  <span>{category.name}</span>
+                  {active ? <X size={14} /> : <Sparkles size={14} />}
+                </Link>
+              );
+            })}
+          </div>
+        </AccordionSection>
+
+        {!lockedFormatType ? (
+          <AccordionSection
+            title="Choose a format"
+            description="Pick the edition that suits how you want to read."
+            icon={<PackageCheck size={14} />}
+            isOpen={openSections.format}
+            onToggle={() => toggleSection("format")}
+          >
+            <div className="flex flex-wrap gap-2">
+              {FORMAT_FILTERS.filter((format) =>
+                Array.isArray(allowedFormats) && allowedFormats.length > 0
+                  ? allowedFormats.includes(format.key)
+                  : true
+              ).map((format) => {
+                const active = activeFormatType === format.key;
+
+                return (
+                  <Link
+                    key={format.key}
+                    href={buildFormatShelfHref(currentQuery, format.key, active)}
+                    className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                      active
+                        ? "bg-slate-950 text-white"
+                        : "border border-[#edf1f7] bg-white text-slate-600 hover:border-[#c8d7f2] hover:text-slate-900"
+                    }`}
+                  >
+                    {format.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </AccordionSection>
+        ) : (
+          <div className="mb-4 rounded-[20px] bg-[#126DEC] px-4 py-4 text-white shadow-[0_16px_40px_-28px_rgba(18,109,236,0.8)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/70">
+              Curated Format
+            </p>
+            <p className="mt-2 text-base font-black">{activeFormatType}</p>
+            <p className="mt-1 text-sm font-medium text-white/70">
+              This page is already focused on this reading format, so you can
+              browse faster.
+            </p>
+          </div>
+        )}
+
+        <AccordionSection
+          title="Set your budget"
+          description="Show books within the price range you want."
+          icon={<BadgeIndianRupee size={14} />}
+          isOpen={openSections.budget}
+          onToggle={() => toggleSection("budget")}
+        >
+          <form action={basePath} className="space-y-3">
+            <input type="hidden" name="page" value="1" />
+            <PersistedQueryInputs
+              currentQuery={currentQuery}
+              excludeKeys={["minPrice", "maxPrice"]}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                min="0"
+                name="minPrice"
+                defaultValue={currentQuery.minPrice}
+                placeholder="₹0"
+                className="h-11 rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold text-slate-800 outline-none focus:border-[#126DEC]"
+              />
+              <input
+                type="number"
+                min="0"
+                name="maxPrice"
+                defaultValue={currentQuery.maxPrice}
+                placeholder="₹2000"
+                className="h-11 rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold text-slate-800 outline-none focus:border-[#126DEC]"
+              />
+            </div>
+            <button className="w-full rounded-full border border-[#cfe0ff] bg-white py-2.5 text-sm font-bold text-[#126DEC] transition hover:border-[#126DEC] hover:bg-[#f3f8ff]">
+              Update price range
+            </button>
+          </form>
+        </AccordionSection>
+
+        <AccordionSection
+          title="Choose a language"
+          description="Filter by language code like EN or ML."
+          icon={<Languages size={14} />}
+          isOpen={openSections.language}
+          onToggle={() => toggleSection("language")}
+        >
+          <form action={basePath} className="space-y-3">
+            <input type="hidden" name="page" value="1" />
+            <PersistedQueryInputs
+              currentQuery={currentQuery}
+              excludeKeys={["languageCode"]}
+            />
+            <input
+              type="text"
+              name="languageCode"
+              defaultValue={currentQuery.languageCode}
+              placeholder="EN, ML..."
+              className="h-11 w-full rounded-[16px] border border-[#edf1f7] bg-[#f8faff] px-4 text-sm font-semibold uppercase text-slate-800 outline-none focus:border-[#126DEC]"
+            />
+            <button className="w-full rounded-full border border-[#cfe0ff] bg-white py-2.5 text-sm font-bold text-[#126DEC] transition hover:border-[#126DEC] hover:bg-[#f3f8ff]">
+              Update language
+            </button>
+          </form>
         </AccordionSection>
       </div>
     </aside>

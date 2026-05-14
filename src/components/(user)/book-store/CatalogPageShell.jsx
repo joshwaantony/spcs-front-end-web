@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Breadcrumb from "@/components/(user)/book-store/Breadcrumb";
+import ImportantFiltersBar from "@/components/(user)/book-store/ImportantFiltersBar";
 import Pagination from "@/components/(user)/book-store/Pagination";
 import ProductGrid from "@/components/(user)/book-store/ProductGrid";
 import SidebarFilters from "@/components/(user)/book-store/SidebarFilters";
@@ -124,6 +125,12 @@ export default function CatalogPageShell({
                 {error}
               </motion.div>
             ) : null}
+
+            <ImportantFiltersBar
+              basePath={basePath}
+              currentQuery={filters}
+              hideDigitalToggle={hideDigitalToggle}
+            />
 
             <ProductGrid
               books={books}

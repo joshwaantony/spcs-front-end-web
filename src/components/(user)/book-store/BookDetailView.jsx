@@ -180,7 +180,7 @@ export default function BookDetailView({
         className={`pointer-events-none absolute bottom-[-80px] right-[-60px] h-[320px] w-[320px] rounded-full ${tone.glowB} opacity-90 blur-[120px]`}
       />
 
-      <main className="relative z-10 mx-auto max-w-[1380px] px-2.5 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 xl:px-8">
+      <main className="relative z-10 mx-auto max-w-[1380px] px-2 py-3 min-[360px]:px-2.5 min-[360px]:py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 xl:px-8">
         <motion.div
           variants={sectionVariants}
           initial="hidden"
@@ -212,15 +212,15 @@ export default function BookDetailView({
           initial="hidden"
           animate="visible"
           custom={0.06}
-          className="overflow-hidden rounded-[20px] border border-[#dfe6f0] bg-white shadow-[0_30px_80px_-48px_rgba(15,23,42,0.28)] sm:rounded-[28px] md:rounded-[30px]"
+          className="overflow-hidden rounded-[18px] border border-[#dfe6f0] bg-white shadow-[0_30px_80px_-48px_rgba(15,23,42,0.28)] min-[360px]:rounded-[20px] sm:rounded-[28px] md:rounded-[30px]"
         >
-          <div className="grid lg:grid-cols-[0.76fr_1.24fr]">
+          <div className="grid lg:grid-cols-[minmax(0,0.76fr)_minmax(0,1.24fr)]">
             <motion.section
               variants={sectionVariants}
               initial="hidden"
               animate="visible"
               custom={0.12}
-              className="border-b border-[#e8edf4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-2.5 sm:p-5 md:p-6 lg:border-b-0 lg:border-r"
+              className="border-b border-[#e8edf4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-2 sm:p-5 md:p-6 lg:border-b-0 lg:border-r"
             >
               <Link
                 href={basePath}
@@ -233,7 +233,7 @@ export default function BookDetailView({
               <motion.div
                 whileHover={{ y: -4 }}
                 transition={{ duration: 0.28, ease: "easeOut" }}
-                className="relative overflow-hidden rounded-[18px] border border-[#edf2f7] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f8ff_48%,#eef3ff_100%)] p-3 sm:rounded-[24px] sm:p-5 md:rounded-[26px] md:p-6"
+                className="relative overflow-hidden rounded-[16px] border border-[#edf2f7] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f8ff_48%,#eef3ff_100%)] p-2.5 min-[360px]:rounded-[18px] min-[360px]:p-3 sm:rounded-[24px] sm:p-5 md:rounded-[26px] md:p-6"
               >
                 <div
                   className={`pointer-events-none absolute inset-x-4 top-4 h-20 rounded-full ${tone.glowA} opacity-75 blur-3xl sm:inset-x-8 sm:top-6 sm:h-24 md:inset-x-10 md:top-8 md:h-28`}
@@ -245,7 +245,7 @@ export default function BookDetailView({
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: 0.14, duration: 0.45, ease: "easeOut" }}
                   whileHover={{ scale: 1.04, y: -8, rotate: 0.6 }}
-                  className="relative z-10 mx-auto h-[180px] object-contain drop-shadow-[0_24px_34px_rgba(15,23,42,0.22)] min-[360px]:h-[220px] sm:h-[280px] md:h-[360px] lg:h-[400px] xl:h-[440px]"
+                  className="relative z-10 mx-auto h-[168px] max-w-full object-contain drop-shadow-[0_24px_34px_rgba(15,23,42,0.22)] min-[360px]:h-[220px] sm:h-[280px] md:h-[360px] lg:h-[400px] xl:h-[440px]"
                 />
               </motion.div>
 
@@ -254,7 +254,7 @@ export default function BookDetailView({
                 initial="hidden"
                 animate="visible"
                 custom={0.2}
-                className="mt-3 rounded-[18px] border border-[#ebf0f7] bg-[#f8fbff] p-3 sm:mt-5 sm:rounded-[22px] sm:p-5 md:mt-6 md:rounded-[24px]"
+                className="mt-3 rounded-[16px] border border-[#ebf0f7] bg-[#f8fbff] p-3 min-[360px]:rounded-[18px] sm:mt-5 sm:rounded-[22px] sm:p-5 md:mt-6 md:rounded-[24px]"
               >
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7b8ca6]">
@@ -275,7 +275,7 @@ export default function BookDetailView({
               initial="hidden"
               animate="visible"
               custom={0.18}
-              className="p-3 sm:p-6 md:p-7 lg:p-8"
+              className="min-w-0 p-3 sm:p-6 md:p-7 lg:p-8"
             >
               <motion.div
                 variants={staggerContainer}
@@ -319,12 +319,13 @@ export default function BookDetailView({
                 </motion.p>
               </motion.div>
 
-              <div className="grid gap-6 pt-5 xl:grid-cols-[0.95fr_1.05fr] xl:gap-8 xl:pt-6">
+              <div className="grid gap-5 pt-5 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] 2xl:gap-8 xl:pt-6">
                 <motion.div
                   variants={sectionVariants}
                   initial="hidden"
                   animate="visible"
                   custom={0.24}
+                  className="min-w-0"
                 >
                   <motion.div
                     variants={staggerContainer}
@@ -346,22 +347,22 @@ export default function BookDetailView({
                   variants={staggerContainer}
                   initial="hidden"
                   animate="visible"
-                  className="space-y-4 sm:space-y-5"
+                  className="min-w-0 space-y-4 sm:space-y-5"
                 >
                   <motion.div
                     variants={staggerItem}
                     whileHover={{ y: -4 }}
-                    className="rounded-[18px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] sm:rounded-[22px] sm:p-5 md:rounded-[24px]"
+                    className="rounded-[16px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] min-[360px]:rounded-[18px] sm:rounded-[22px] sm:p-5 md:rounded-[24px]"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f4f8ff] text-[#126DEC]">
+                    <div className="flex items-center gap-2.5 min-[360px]:gap-3">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[16px] bg-[#f4f8ff] text-[#126DEC] min-[360px]:h-10 min-[360px]:w-10 min-[360px]:rounded-2xl">
                         <PackageCheck size={18} />
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7b8ca6]">
                           Purchase options
                         </p>
-                        <h2 className="text-xl font-black text-[#131821]">
+                        <h2 className="text-lg font-black text-[#131821] min-[360px]:text-xl">
                           Simple next steps
                         </h2>
                       </div>
@@ -373,7 +374,7 @@ export default function BookDetailView({
                       </p>
                       <div className="mt-2 flex flex-wrap items-end gap-x-2 gap-y-1">
                         <span className={`pb-1 text-sm font-black ${tone.accent}`}>₹</span>
-                        <span className={`text-3xl font-black leading-none ${tone.accent}`}>
+                        <span className={`text-[28px] font-black leading-none min-[360px]:text-3xl ${tone.accent}`}>
                           {activePrice}
                         </span>
                         {discountAmount > 0 ? (
@@ -426,7 +427,7 @@ export default function BookDetailView({
                   <motion.div
                     variants={staggerItem}
                     whileHover={{ y: -4 }}
-                    className="rounded-[18px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] sm:rounded-[22px] sm:p-5 md:rounded-[24px]"
+                    className="rounded-[16px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] min-[360px]:rounded-[18px] sm:rounded-[22px] sm:p-5 md:rounded-[24px]"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -443,7 +444,7 @@ export default function BookDetailView({
                       Share it with readers, friends, or your community in just one tap.
                     </p>
 
-                    <div className="mt-4 grid gap-2.5 min-[360px]:gap-3 md:grid-cols-2">
+                    <div className="mt-4 grid gap-2.5 min-[360px]:gap-3 xl:grid-cols-2">
                       <ShareButton
                         icon={<FaFacebookF size={18} />}
                         label="Facebook"
@@ -470,8 +471,8 @@ export default function BookDetailView({
                       />
                     </div>
 
-                    <div className="mt-4 rounded-[18px] border border-[#e8eef6] bg-[#f8fbff] p-3 sm:rounded-[20px]">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="mt-4 rounded-[16px] border border-[#e8eef6] bg-[#f8fbff] p-3 min-[360px]:rounded-[18px] sm:rounded-[20px]">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="min-w-0">
                           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7b8ca6]">
                             Copy link
@@ -496,9 +497,9 @@ export default function BookDetailView({
         </motion.div>
       </main>
 
-      <div className="sticky bottom-0 z-30 border-t border-[#dde6f2] bg-white/95 px-2.5 py-2.5 shadow-[0_-18px_35px_-24px_rgba(15,23,42,0.2)] backdrop-blur md:hidden">
+      <div className="sticky bottom-0 z-30 border-t border-[#dde6f2] bg-white/95 px-2 py-2 shadow-[0_-18px_35px_-24px_rgba(15,23,42,0.2)] backdrop-blur min-[360px]:px-2.5 min-[360px]:py-2.5 md:hidden">
         <div className="mx-auto max-w-[1380px]">
-          <div className="mb-2.5 flex items-end justify-between gap-2.5">
+          <div className="mb-2.5 flex items-end justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7b8ca6]">
                 Current price
@@ -515,12 +516,12 @@ export default function BookDetailView({
                 ) : null}
               </div>
             </div>
-            <span className="rounded-full border border-[#d7ecbf] bg-[#eefbe8] px-3 py-1 text-[10px] font-bold text-[#3f7a15]">
+            <span className="shrink-0 rounded-full border border-[#d7ecbf] bg-[#eefbe8] px-2.5 py-1 text-[9px] font-bold text-[#3f7a15] min-[360px]:px-3 min-[360px]:text-[10px]">
               {book.inStock ? "In stock" : "Check stock"}
             </span>
           </div>
 
-            <div className="grid grid-cols-2 gap-2.5 min-[360px]:gap-3">
+            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 min-[360px]:gap-3">
               <button
                 className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-[12px] font-black text-white shadow-[0_16px_28px_-18px_rgba(18,109,236,0.5)] transition active:scale-[0.99] min-[360px]:h-11 min-[360px]:gap-2 min-[360px]:px-4 min-[360px]:text-sm ${tone.button}`}
               >
@@ -540,7 +541,7 @@ export default function BookDetailView({
 
 function MetaLine({ label, value }) {
   return (
-    <div className="grid grid-cols-1 gap-1 text-[13px] min-[360px]:text-sm sm:grid-cols-[110px_12px_1fr] sm:items-start sm:gap-2 md:grid-cols-[128px_16px_1fr]">
+    <div className="grid grid-cols-1 gap-1.5 rounded-[14px] bg-[#fbfdff] px-3 py-2.5 text-[13px] min-[360px]:text-sm sm:grid-cols-[110px_12px_1fr] sm:items-start sm:gap-2 sm:rounded-none sm:bg-transparent sm:px-0 sm:py-0 md:grid-cols-[128px_16px_1fr]">
       <span className="font-semibold text-[#273344]">{label}</span>
       <span className="hidden font-semibold text-[#97a3b3] sm:block">:</span>
       <span className="font-medium break-words text-[#556980]">{value}</span>
@@ -550,8 +551,8 @@ function MetaLine({ label, value }) {
 
 function TrustRow({ icon, label }) {
   return (
-    <div className="flex items-center gap-3 rounded-[18px] border border-[#edf2f9] bg-[#fbfdff] px-4 py-3">
-      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eef4ff] text-[#126DEC]">
+    <div className="flex items-center gap-2.5 rounded-[16px] border border-[#edf2f9] bg-[#fbfdff] px-3 py-3 min-[360px]:gap-3 min-[360px]:rounded-[18px] min-[360px]:px-4">
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eef4ff] text-[#126DEC] min-[360px]:h-9 min-[360px]:w-9">
         {icon}
       </span>
       <p className="text-[13px] font-semibold leading-5 text-[#566a86] min-[360px]:text-sm">{label}</p>

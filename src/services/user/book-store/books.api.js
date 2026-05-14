@@ -1,7 +1,4 @@
-const API_ORIGIN =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-
-const API_BASE_URL = `${API_ORIGIN}/api/v1`;
+import { apiRaw } from "@/lib/admin-axios";
 
 const buildBooksQueryString = ({
   page = 1,
@@ -123,7 +120,10 @@ const normalizeBook = (book) => {
     return null;
   }
 
-  const primaryFormat = getPrimaryFormat(book.formats);
+  const formats = Array.isArray(book.formats)
+    ? book.formats.map(normalizeFormat).filter(Boolean)
+    : [];
+  const primaryFormat = getPrimaryFormat(formats);
   const coverImage =
     book.cover_image_url ||
     book.image ||
@@ -142,9 +142,6 @@ const normalizeBook = (book) => {
     book.stockCount ??
     book.stock ??
     0;
-  const formats = Array.isArray(book.formats)
-    ? book.formats.map(normalizeFormat).filter(Boolean)
-    : [];
   const categories = Array.isArray(book.categories)
     ? book.categories
         .map((item) => item?.category || item)
@@ -167,7 +164,26 @@ const normalizeBook = (book) => {
     description: book.description || "",
     edition: book.edition || "",
     pages: Number(book.pages ?? 0),
-    publisher: book.publisher || null,
+    status: book.status || "",
+    createdAt: book.createdAt || "",
+    updatedAt: book.updatedAt || "",
+    publisher: book.publisher
+      ? {
+          ...book.publisher,
+          id: book.publisher.id || "",
+          name: book.publisher.name || "SPCS",
+          slug: book.publisher.slug || "",
+        }
+      : null,
+    coverMedia: book.coverMedia
+      ? {
+          ...book.coverMedia,
+          id: book.coverMedia.id || "",
+          url: getMediaUrl(book.coverMedia),
+          altText: book.coverMedia.altText || book.title || "",
+          mimeType: book.coverMedia.mimeType || "",
+        }
+      : null,
     image: coverImage || "/images/book-placeholder.png",
     price,
     discountAmount,
@@ -271,43 +287,35 @@ const parseBookPayload = (payload) => {
 
 export async function getPublicBooks(params = {}) {
   const queryString = buildBooksQueryString(params);
-  const response = await fetch(`${API_BASE_URL}/books?${queryString}`, {
-    cache: "no-store",
+  const response = await apiRaw.get(`/books?${queryString}`, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch books");
-  }
-
-  const payload = await response.json();
+  const payload = response.data;
   return parseBooksPayload(payload, params.page || 1, params.limit || 20);
 }
 
 export async function getPublicCategories() {
-  const response = await fetch(`${API_BASE_URL}/categories?page=1&limit=100`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
+  try {
+    const response = await apiRaw.get("/categories?page=1&limit=100", {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
+    const payload = response.data;
+    return parseCategoriesPayload(payload);
+  } catch {
     return [];
   }
-
-  const payload = await response.json();
-  return parseCategoriesPayload(payload);
 }
 
 export async function getPublicBookBySlug(slug) {
-  const response = await fetch(
-    `${API_BASE_URL}/books/${encodeURIComponent(slug)}`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch book");
-  }
-
-  const payload = await response.json();
+  const response = await apiRaw.get(`/books/${encodeURIComponent(slug)}`, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
+  const payload = response.data;
   return parseBookPayload(payload);
 }
