@@ -1,5 +1,28 @@
-
+import { motion } from "framer-motion";
 import ProductCard from "./ProductCard";
+
+const gridVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.06,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 22 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.42,
+      ease: "easeOut",
+    },
+  },
+};
 
 function ProductCardSkeleton() {
   return (
@@ -37,7 +60,12 @@ export default function ProductGrid({
 
   if (!books.length) {
     return (
-      <section className="rounded-[30px] border border-dashed border-slate-200 bg-white/80 px-6 py-16 text-center shadow-[0_18px_60px_-36px_rgba(15,23,42,0.24)]">
+      <motion.section
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="rounded-[30px] border border-dashed border-slate-200 bg-white/80 px-6 py-16 text-center shadow-[0_18px_60px_-36px_rgba(15,23,42,0.24)]"
+      >
         <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
           No Matches
         </p>
@@ -45,17 +73,24 @@ export default function ProductGrid({
         <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-6 text-slate-500">
           {emptyDescription}
         </p>
-      </section>
+      </motion.section>
     );
   }
 
   return (
     <section className="py-2">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+      <motion.div
+        variants={gridVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+      >
         {books.map((book) => (
-          <ProductCard key={book.id} book={book} />
+          <motion.div key={book.id} variants={itemVariants}>
+            <ProductCard book={book} />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 }

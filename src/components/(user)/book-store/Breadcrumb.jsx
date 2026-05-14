@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Check, ChevronDown } from "lucide-react";
 import { buildCatalogHref } from "./catalog.utils";
 
@@ -20,7 +21,12 @@ export default function Breadcrumb({
         : "from-[#edf4ff] via-[#fbfdff] to-[#f7f9ff]";
 
   return (
-    <section className={`mb-10 rounded-[30px] bg-gradient-to-r ${toneClassName} px-5 py-6 md:px-8 md:py-8`}>
+    <motion.section
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className={`mb-10 rounded-[30px] bg-gradient-to-r ${toneClassName} px-5 py-6 md:px-8 md:py-8`}
+    >
       <nav className="mb-5 flex flex-wrap items-center gap-2 text-sm font-medium text-[#5f7494]">
           <Link href="/home" className="hover:text-slate-900">
             Home
@@ -34,7 +40,11 @@ export default function Breadcrumb({
       </nav>
 
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.45, ease: "easeOut" }}
+        >
           <h1 className="text-3xl font-black tracking-tight text-[#1a2230] md:text-5xl">
             {title}
           </h1>
@@ -44,9 +54,14 @@ export default function Breadcrumb({
           <p className="mt-2 text-sm text-[#667892]">
             Showing <span className="font-bold text-[#126DEC]">{total}</span> titles
           </p>
-        </div>
+        </motion.div>
 
-        <div className="flex items-center gap-3 self-start lg:self-auto">
+        <motion.div
+          initial={{ opacity: 0, x: 18 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.14, duration: 0.45, ease: "easeOut" }}
+          className="flex items-center gap-3 self-start lg:self-auto"
+        >
           <span className="text-sm font-medium text-[#667892]">Sort by:</span>
           <div className="group relative">
             <button className="flex items-center gap-2 rounded-full border border-white/80 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_30px_-20px_rgba(15,23,42,0.35)] transition hover:border-[#c7d8f6] hover:text-slate-900">
@@ -73,9 +88,9 @@ export default function Breadcrumb({
               />
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </section>
+    </motion.section>
   );
 }
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { buildCatalogHref } from "./catalog.utils";
 
 const getVisiblePages = (currentPage, totalPages) => {
@@ -17,7 +18,12 @@ export default function Pagination({ page, totalPages, basePath, currentQuery })
   const visiblePages = getVisiblePages(page, totalPages);
 
   return (
-    <div className="flex justify-center mt-14">
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: "easeOut", delay: 0.18 }}
+      className="mt-14 flex justify-center"
+    >
       <nav className="flex items-center gap-1 rounded-[20px] border border-white/80 bg-white px-3 py-2 shadow-[0_16px_45px_-32px_rgba(15,23,42,0.16)]">
         <Link
           aria-label="Previous page"
@@ -74,6 +80,6 @@ export default function Pagination({ page, totalPages, basePath, currentQuery })
           ›
         </Link>
       </nav>
-    </div>
+    </motion.div>
   );
 }
