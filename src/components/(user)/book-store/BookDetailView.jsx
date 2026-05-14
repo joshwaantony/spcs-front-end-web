@@ -66,6 +66,42 @@ const badgeToneMap = {
   "Pre-Order": "border-[#ffd0db] bg-[#ffeef1] text-[#bf3f63]",
 };
 
+const sectionVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (delay = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay,
+      duration: 0.45,
+      ease: "easeOut",
+    },
+  }),
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.08,
+    },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 16 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.38,
+      ease: "easeOut",
+    },
+  },
+};
+
 function getBadges(book) {
   const badges = [];
 
@@ -131,18 +167,25 @@ export default function BookDetailView({
       transition={{ duration: 0.4, ease: "easeOut" }}
       className={`relative min-h-screen overflow-x-hidden ${tone.shell}`}
     >
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
         className={`pointer-events-none absolute left-[-120px] top-[-80px] h-[360px] w-[360px] rounded-full ${tone.glowA} opacity-70 blur-[120px]`}
       />
-      <div
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.95, delay: 0.08, ease: "easeOut" }}
         className={`pointer-events-none absolute bottom-[-80px] right-[-60px] h-[320px] w-[320px] rounded-full ${tone.glowB} opacity-90 blur-[120px]`}
       />
 
       <main className="relative z-10 mx-auto max-w-[1380px] px-2.5 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8 xl:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          custom={0}
           className="mb-4 sm:mb-5"
         >
           <nav className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-[#667892] sm:text-sm">
@@ -165,13 +208,20 @@ export default function BookDetailView({
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.06, duration: 0.45, ease: "easeOut" }}
+          variants={sectionVariants}
+          initial="hidden"
+          animate="visible"
+          custom={0.06}
           className="overflow-hidden rounded-[20px] border border-[#dfe6f0] bg-white shadow-[0_30px_80px_-48px_rgba(15,23,42,0.28)] sm:rounded-[28px] md:rounded-[30px]"
         >
           <div className="grid lg:grid-cols-[0.76fr_1.24fr]">
-            <section className="border-b border-[#e8edf4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-2.5 sm:p-5 md:p-6 lg:border-b-0 lg:border-r">
+            <motion.section
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              custom={0.12}
+              className="border-b border-[#e8edf4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-2.5 sm:p-5 md:p-6 lg:border-b-0 lg:border-r"
+            >
               <Link
                 href={basePath}
                 className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#e0e8f5] bg-white px-3 py-2 text-[11px] font-semibold text-[#50637d] transition hover:-translate-y-0.5 hover:text-slate-900 sm:mb-5 sm:gap-2 sm:px-4 sm:text-sm"
@@ -180,7 +230,11 @@ export default function BookDetailView({
                 Back to shelf
               </Link>
 
-              <div className="relative overflow-hidden rounded-[18px] border border-[#edf2f7] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f8ff_48%,#eef3ff_100%)] p-3 sm:rounded-[24px] sm:p-5 md:rounded-[26px] md:p-6">
+              <motion.div
+                whileHover={{ y: -4 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                className="relative overflow-hidden rounded-[18px] border border-[#edf2f7] bg-[radial-gradient(circle_at_top,#ffffff_0%,#f5f8ff_48%,#eef3ff_100%)] p-3 sm:rounded-[24px] sm:p-5 md:rounded-[26px] md:p-6"
+              >
                 <div
                   className={`pointer-events-none absolute inset-x-4 top-4 h-20 rounded-full ${tone.glowA} opacity-75 blur-3xl sm:inset-x-8 sm:top-6 sm:h-24 md:inset-x-10 md:top-8 md:h-28`}
                 />
@@ -190,11 +244,18 @@ export default function BookDetailView({
                   initial={{ opacity: 0, y: 10, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ delay: 0.14, duration: 0.45, ease: "easeOut" }}
+                  whileHover={{ scale: 1.04, y: -8, rotate: 0.6 }}
                   className="relative z-10 mx-auto h-[180px] object-contain drop-shadow-[0_24px_34px_rgba(15,23,42,0.22)] min-[360px]:h-[220px] sm:h-[280px] md:h-[360px] lg:h-[400px] xl:h-[440px]"
                 />
-              </div>
+              </motion.div>
 
-              <div className="mt-3 rounded-[18px] border border-[#ebf0f7] bg-[#f8fbff] p-3 sm:mt-5 sm:rounded-[22px] sm:p-5 md:mt-6 md:rounded-[24px]">
+              <motion.div
+                variants={sectionVariants}
+                initial="hidden"
+                animate="visible"
+                custom={0.2}
+                className="mt-3 rounded-[18px] border border-[#ebf0f7] bg-[#f8fbff] p-3 sm:mt-5 sm:rounded-[22px] sm:p-5 md:mt-6 md:rounded-[24px]"
+              >
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7b8ca6]">
                     Description
@@ -206,49 +267,92 @@ export default function BookDetailView({
                 <p className="mt-3 break-words text-[13px] font-medium leading-6 text-[#556980] min-[360px]:text-sm min-[360px]:leading-7 md:mt-4 md:text-[15px] md:leading-8">
                   {book.description}
                 </p>
-              </div>
-            </section>
+              </motion.div>
+            </motion.section>
 
-            <section className="p-3 sm:p-6 md:p-7 lg:p-8">
-              <div className="border-b border-[#e8edf4] pb-5">
+            <motion.section
+              variants={sectionVariants}
+              initial="hidden"
+              animate="visible"
+              custom={0.18}
+              className="p-3 sm:p-6 md:p-7 lg:p-8"
+            >
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="border-b border-[#e8edf4] pb-5"
+              >
                 <div className="flex flex-wrap gap-2">
                   {badges.map((badge) => (
-                    <span
+                    <motion.span
                       key={badge}
+                      variants={staggerItem}
                       className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${
                         badgeToneMap[badge] || "border-slate-200 bg-white text-slate-700"
                       }`}
                     >
                       {badge}
-                    </span>
+                    </motion.span>
                   ))}
                   {primaryFormat ? (
-                    <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${tone.soft}`}>
+                    <motion.span
+                      variants={staggerItem}
+                      className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${tone.soft}`}
+                    >
                       {FORMAT_LABELS[primaryFormat.type] || primaryFormat.type}
-                    </span>
+                    </motion.span>
                   ) : null}
                 </div>
 
-                <h1 className="mt-3 break-words text-[1.65rem] font-black tracking-[-0.03em] text-[#131821] leading-tight min-[360px]:text-[2rem] sm:mt-4 sm:text-[2.4rem] md:text-[2.9rem] lg:text-[3.3rem] lg:leading-[1.02]">
+                <motion.h1
+                  variants={staggerItem}
+                  className="mt-3 break-words text-[1.65rem] font-black tracking-[-0.03em] text-[#131821] leading-tight min-[360px]:text-[2rem] sm:mt-4 sm:text-[2.4rem] md:text-[2.9rem] lg:text-[3.3rem] lg:leading-[1.02]"
+                >
                   {book.title}
-                </h1>
-                <p className="mt-2 text-[13px] font-semibold text-[#617289] min-[360px]:text-sm sm:mt-3 sm:text-base md:text-lg">
+                </motion.h1>
+                <motion.p
+                  variants={staggerItem}
+                  className="mt-2 text-[13px] font-semibold text-[#617289] min-[360px]:text-sm sm:mt-3 sm:text-base md:text-lg"
+                >
                   {book.authorName}
-                </p>
-              </div>
+                </motion.p>
+              </motion.div>
 
               <div className="grid gap-6 pt-5 xl:grid-cols-[0.95fr_1.05fr] xl:gap-8 xl:pt-6">
-                <div>
-                  <div className="space-y-3 sm:space-y-4">
+                <motion.div
+                  variants={sectionVariants}
+                  initial="hidden"
+                  animate="visible"
+                  custom={0.24}
+                >
+                  <motion.div
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="visible"
+                    className="space-y-3 sm:space-y-4"
+                  >
                     {metadataRows.map((row) => (
-                      <MetaLine key={row.label} label={row.label} value={row.value} />
+                      <MetaLine
+                        key={row.label}
+                        label={row.label}
+                        value={row.value}
+                      />
                     ))}
-                  </div>
+                  </motion.div>
+                </motion.div>
 
-                </div>
-
-                <div className="space-y-4 sm:space-y-5">
-                  <div className="rounded-[18px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] sm:rounded-[22px] sm:p-5 md:rounded-[24px]">
+                <motion.div
+                  variants={staggerContainer}
+                  initial="hidden"
+                  animate="visible"
+                  className="space-y-4 sm:space-y-5"
+                >
+                  <motion.div
+                    variants={staggerItem}
+                    whileHover={{ y: -4 }}
+                    className="rounded-[18px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] sm:rounded-[22px] sm:p-5 md:rounded-[24px]"
+                  >
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f4f8ff] text-[#126DEC]">
                         <PackageCheck size={18} />
@@ -281,16 +385,22 @@ export default function BookDetailView({
                     </div>
 
                     <div className="mt-4 grid gap-2.5 sm:gap-3">
-                      <button
+                      <motion.button
+                        whileHover={{ y: -2, scale: 1.01 }}
+                        whileTap={{ scale: 0.985 }}
                         className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-3 text-[13px] font-black text-white shadow-[0_16px_28px_-18px_rgba(18,109,236,0.5)] transition hover:-translate-y-0.5 min-[360px]:h-12 min-[360px]:px-4 min-[360px]:text-sm ${tone.button}`}
                       >
                         <ShoppingCart size={16} />
                         Add to cart
-                      </button>
-                      <button className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#111418] px-3 text-[13px] font-black text-white shadow-[0_16px_26px_-18px_rgba(17,20,24,0.5)] transition hover:-translate-y-0.5 hover:bg-[#126DEC] min-[360px]:h-12 min-[360px]:px-4 min-[360px]:text-sm">
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ y: -2, scale: 1.01 }}
+                        whileTap={{ scale: 0.985 }}
+                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#111418] px-3 text-[13px] font-black text-white shadow-[0_16px_26px_-18px_rgba(17,20,24,0.5)] transition hover:-translate-y-0.5 hover:bg-[#126DEC] min-[360px]:h-12 min-[360px]:px-4 min-[360px]:text-sm"
+                      >
                         <Sparkles size={16} />
                         Buy now
-                      </button>
+                      </motion.button>
                     </div>
 
                     <div className="mt-4 space-y-3 sm:mt-5">
@@ -311,9 +421,13 @@ export default function BookDetailView({
                         label={`Language: ${getLanguageLabel(book.languageCode)}`}
                       />
                     </div>
-                  </div>
+                  </motion.div>
 
-                  <div className="rounded-[18px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] sm:rounded-[22px] sm:p-5 md:rounded-[24px]">
+                  <motion.div
+                    variants={staggerItem}
+                    whileHover={{ y: -4 }}
+                    className="rounded-[18px] border border-[#ebf0f7] bg-white p-3 shadow-[0_18px_40px_-34px_rgba(15,23,42,0.2)] sm:rounded-[22px] sm:p-5 md:rounded-[24px]"
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#7b8ca6]">
@@ -374,10 +488,10 @@ export default function BookDetailView({
                         />
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </motion.div>
+                </motion.div>
               </div>
-            </section>
+            </motion.section>
           </div>
         </motion.div>
       </main>
