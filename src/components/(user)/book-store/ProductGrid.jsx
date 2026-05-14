@@ -45,6 +45,7 @@ export default function ProductGrid({
   loading,
   emptyTitle,
   emptyDescription,
+  basePath,
 }) {
   if (loading) {
     return (
@@ -87,7 +88,10 @@ export default function ProductGrid({
       >
         {books.map((book) => (
           <motion.div key={book.id} variants={itemVariants}>
-            <ProductCard book={book} />
+            <ProductCard
+              book={book}
+              detailHref={book.slug ? `${basePath}/${book.slug}` : basePath}
+            />
           </motion.div>
         ))}
       </motion.div>

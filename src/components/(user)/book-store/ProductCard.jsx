@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { FiShoppingCart, FiHeart } from "react-icons/fi";
 import { HiOutlineBolt } from "react-icons/hi2";
@@ -31,7 +32,7 @@ const getBadges = (book) => {
   return badges.slice(0, 2);
 };
 
-export default function ProductCard({ book }) {
+export default function ProductCard({ book, detailHref }) {
   const [liked, setLiked] = useState(false);
   const badges = getBadges(book);
   const primaryBadge = badges[0] || book.categoryNames?.[0] || "";
@@ -56,6 +57,7 @@ export default function ProductCard({ book }) {
         <div className="pointer-events-none absolute inset-x-6 top-5 h-24 rounded-full bg-[#d9e7ff]/70 blur-2xl transition duration-500 group-hover:scale-110" />
 
         <motion.button
+          type="button"
           onClick={() => setLiked(!liked)}
           whileTap={{ scale: 0.92 }}
           className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-md opacity-0 scale-90 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100 hover:scale-110 active:scale-95"
@@ -81,23 +83,27 @@ export default function ProductCard({ book }) {
           ) : null}
         </div>
 
-        <motion.img
-          src={book.image}
-          alt={book.title}
-          whileHover={{ y: -10, scale: 1.04, rotate: 0.8 }}
-          transition={{ duration: 0.45, ease: "easeOut" }}
-          className="
+        <Link href={detailHref} className="relative z-[1] flex h-full w-full items-center justify-center">
+          <motion.img
+            src={book.image}
+            alt={book.title}
+            whileHover={{ y: -10, scale: 1.04, rotate: 0.8 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+            className="
             relative z-[1] h-[205px] object-contain drop-shadow-[0_22px_28px_rgba(15,23,42,0.18)]
             transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-[1.05] group-hover:rotate-[0.8deg]
           "
-        />
+          />
+        </Link>
       </div>
 
       <div className="border-t border-[#eef2f7] px-4 pb-4 pt-5">
         <div className="mb-3 min-h-[64px]">
-          <h3 className="line-clamp-2 text-[17px] font-black leading-6 tracking-[-0.01em] text-[#111418] transition-colors duration-300 group-hover:text-[#126DEC]">
-            {book.title}
-          </h3>
+          <Link href={detailHref} className="block">
+            <h3 className="line-clamp-2 text-[17px] font-black leading-6 tracking-[-0.01em] text-[#111418] transition-colors duration-300 group-hover:text-[#126DEC]">
+              {book.title}
+            </h3>
+          </Link>
           <p className="mt-1 text-sm font-semibold text-[#72839b]">
             {book.authorName}
           </p>
@@ -136,6 +142,7 @@ export default function ProductCard({ book }) {
             </div>
 
             <motion.button
+              type="button"
               whileHover={{ y: -3, scale: 1.08 }}
               whileTap={{ scale: 0.95 }}
               className="
@@ -148,18 +155,23 @@ export default function ProductCard({ book }) {
             </motion.button>
           </div>
 
-          <motion.button
+          <motion.div
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.985 }}
-            className="
+            className="mt-3"
+          >
+            <Link
+              href={detailHref}
+              className="
               mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#111418] px-4
               text-sm font-black text-white shadow-[0_16px_26px_-18px_rgba(17,20,24,0.5)]
               transition-all duration-300 hover:-translate-y-1 hover:bg-[#126DEC] active:scale-[0.99]
             "
-          >
-            <HiOutlineBolt size={16} />
-            Buy Now
-          </motion.button>
+            >
+              <HiOutlineBolt size={16} />
+              View Details
+            </Link>
+          </motion.div>
         </div>
       </div>
     </motion.div>

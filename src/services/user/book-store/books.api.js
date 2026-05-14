@@ -80,6 +80,32 @@ const buildBooksQueryString = ({
 const getMediaUrl = (media) =>
   media?.url || media?.secureUrl || media?.fileUrl || media?.path || media?.src || "";
 
+const normalizeFormat = (format) => {
+  if (!format) {
+    return null;
+  }
+
+  return {
+    ...format,
+    id: format.id || "",
+    type: format.type || "PAPERBACK",
+    price: Number(format.price ?? 0),
+    discountAmount: Number(format.discountAmount ?? 0),
+    isbn: format.isbn || "",
+    stockCount: Number(format.stockCount ?? 0),
+    hasUnlimitedStock: Boolean(format.hasUnlimitedStock),
+    isDigitalEnabled: Boolean(format.isDigitalEnabled),
+    drmEnabled: Boolean(format.drmEnabled),
+    isActive: format.isActive !== false,
+    media: format.media
+      ? {
+          ...format.media,
+          url: getMediaUrl(format.media),
+        }
+      : null,
+  };
+};
+
 const getPrimaryFormat = (formats = []) => {
   if (!Array.isArray(formats) || formats.length === 0) {
     return null;
@@ -116,6 +142,9 @@ const normalizeBook = (book) => {
     book.stockCount ??
     book.stock ??
     0;
+  const formats = Array.isArray(book.formats)
+    ? book.formats.map(normalizeFormat).filter(Boolean)
+    : [];
   const categories = Array.isArray(book.categories)
     ? book.categories
         .map((item) => item?.category || item)
@@ -131,9 +160,14 @@ const normalizeBook = (book) => {
     ...book,
     id: book.id || book.book_id || "",
     title: book.title || book.name || "Untitled Book",
+    slug: book.slug || "",
     authorName: book.authorName || book.author || "Unknown Author",
     titleMl: book.titleMl || book.malayalam_name || "",
+    authorNameMl: book.authorNameMl || "",
     description: book.description || "",
+    edition: book.edition || "",
+    pages: Number(book.pages ?? 0),
+    publisher: book.publisher || null,
     image: coverImage || "/images/book-placeholder.png",
     price,
     discountAmount,
@@ -141,6 +175,7 @@ const normalizeBook = (book) => {
     formatType,
     categories,
     categoryNames: categories.map((category) => category?.name).filter(Boolean),
+    formats,
     inStock: Number(stockCount) > 0 || Boolean(primaryFormat?.hasUnlimitedStock),
     isDigital: isDigitalBook,
     isFeatured: Boolean(book.isFeatured ?? book.highlight),
@@ -149,6 +184,14 @@ const normalizeBook = (book) => {
     isAwardWinner: Boolean(book.isAwardWinner ?? book.award_winner),
     isPrePublication: Boolean(book.isPrePublication ?? book.republication),
     languageCode: book.languageCode || book.language || "",
+    hasAudio: Boolean(book.hasAudio),
+    hasEbook: Boolean(book.hasEbook),
+    startingPrice: Number(book.startingPrice ?? price ?? 0),
+    maxPrice: Number(book.maxPrice ?? price ?? 0),
+    hasDiscount: Boolean(
+      book.hasDiscount ?? (Number(discountAmount) > 0)
+    ),
+    availableFormats: Number(book.availableFormats ?? formats.length ?? 0),
   };
 };
 
@@ -219,6 +262,13 @@ const parseCategoriesPayload = (payload) => {
     .filter(Boolean);
 };
 
+const parseBookPayload = (payload) => {
+  const source = payload?.data || payload || {};
+  const rawBook = source.data || source.book || source.item || source;
+
+  return normalizeBook(rawBook);
+};
+
 export async function getPublicBooks(params = {}) {
   const queryString = buildBooksQueryString(params);
   const response = await fetch(`${API_BASE_URL}/books?${queryString}`, {
@@ -244,4 +294,20 @@ export async function getPublicCategories() {
 
   const payload = await response.json();
   return parseCategoriesPayload(payload);
+}
+
+export async function getPublicBookBySlug(slug) {
+  const response = await fetch(
+    `${API_BASE_URL}/books/${encodeURIComponent(slug)}`,
+    {
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch book");
+  }
+
+  const payload = await response.json();
+  return parseBookPayload(payload);
 }

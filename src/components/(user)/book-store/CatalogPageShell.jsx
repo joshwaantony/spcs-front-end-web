@@ -130,6 +130,7 @@ export default function CatalogPageShell({
               loading={loading}
               emptyTitle={emptyTitle}
               emptyDescription={emptyDescription}
+              basePath={basePath}
             />
 
             <Pagination
