@@ -1,7 +1,6 @@
 import ContactCards from "@/components/(user)/contact-us/ContactCards";
 import ContactFormSection from "@/components/(user)/contact-us/ContactFormSection";
 import ContactHero from "@/components/(user)/contact-us/ContactHero";
-import ContactInfo from "@/components/(user)/contact-us/ContactInfo";
 
 
 export default function ContactPage() {
@@ -10,7 +9,6 @@ export default function ContactPage() {
       <ContactHero />
       <ContactCards />
       <ContactFormSection />
-      <ContactInfo />
     </div>
   );
 }
