@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { FiShoppingCart, FiHeart } from "react-icons/fi";
 import { HiOutlineBolt } from "react-icons/hi2";
 import { useState } from "react";
@@ -37,7 +38,9 @@ export default function ProductCard({ book }) {
   const secondaryBadge = badges[1] || book.languageCode || book.formatType;
 
   return (
-    <div
+    <motion.div
+      whileHover={{ y: -8 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
       className="
         group overflow-hidden rounded-[28px] border border-white/90 bg-white
         shadow-[0_20px_50px_-32px_rgba(20,31,56,0.16)]
@@ -52,8 +55,9 @@ export default function ProductCard({ book }) {
       >
         <div className="pointer-events-none absolute inset-x-6 top-5 h-24 rounded-full bg-[#d9e7ff]/70 blur-2xl transition duration-500 group-hover:scale-110" />
 
-        <button
+        <motion.button
           onClick={() => setLiked(!liked)}
+          whileTap={{ scale: 0.92 }}
           className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-md opacity-0 scale-90 transition-all duration-300 group-hover:scale-100 group-hover:opacity-100 hover:scale-110 active:scale-95"
         >
           <FiHeart
@@ -64,7 +68,7 @@ export default function ProductCard({ book }) {
                 : "text-slate-400"
             }`}
           />
-        </button>
+        </motion.button>
 
         <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-2">
           <span className="rounded-full bg-[#111418] px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white">
@@ -77,9 +81,11 @@ export default function ProductCard({ book }) {
           ) : null}
         </div>
 
-        <img
+        <motion.img
           src={book.image}
           alt={book.title}
+          whileHover={{ y: -10, scale: 1.04, rotate: 0.8 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
           className="
             relative z-[1] h-[205px] object-contain drop-shadow-[0_22px_28px_rgba(15,23,42,0.18)]
             transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-[1.05] group-hover:rotate-[0.8deg]
@@ -129,7 +135,9 @@ export default function ProductCard({ book }) {
               </span>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ y: -3, scale: 1.08 }}
+              whileTap={{ scale: 0.95 }}
               className="
                 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#126DEC] text-white
                 shadow-[0_12px_24px_-12px_rgba(18,109,236,0.85)] transition-all duration-300
@@ -137,10 +145,12 @@ export default function ProductCard({ book }) {
               "
             >
               <FiShoppingCart size={18} />
-            </button>
+            </motion.button>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.985 }}
             className="
               mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#111418] px-4
               text-sm font-black text-white shadow-[0_16px_26px_-18px_rgba(17,20,24,0.5)]
@@ -149,9 +159,9 @@ export default function ProductCard({ book }) {
           >
             <HiOutlineBolt size={16} />
             Buy Now
-          </button>
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

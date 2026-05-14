@@ -4,7 +4,7 @@ import { create } from "zustand";
 import {
   getPublicBooks,
   getPublicCategories,
-} from "@/services/user/books.api";
+} from "@/services/user/book-store/books.api";
 
 const createDefaultFilters = (overrides = {}) => ({
   page: 1,
