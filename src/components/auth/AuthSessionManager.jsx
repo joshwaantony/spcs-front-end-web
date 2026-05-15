@@ -29,7 +29,6 @@ export default function AuthSessionManager() {
     }
 
     const isLoggedIn = isAuthenticated && !!user;
-    const isLogoutPage = pathname === "/logout";
 
     if (!isLoggedIn) {
       if (isAuthPage(pathname)) {
@@ -45,10 +44,6 @@ export default function AuthSessionManager() {
         router.replace("/login");
       }
 
-      return;
-    }
-
-    if (isLogoutPage) {
       return;
     }
 

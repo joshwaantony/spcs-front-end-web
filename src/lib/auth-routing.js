@@ -1,7 +1,6 @@
 export const AUTH_PUBLIC_PATHS = [
   "/login",
   "/register",
-  "/logout",
   "/admin/login",
   "/forgot-password",
   "/reset-password",

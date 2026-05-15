@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { HiArrowRight, HiEye, HiEyeOff, HiLockClosed, HiMail, HiUser } from "react-icons/hi";
+import GoogleSignInPanel from "@/components/auth/GoogleSignInPanel";
 import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 import { useToastStore } from "@/store/ui/toast.store";
 import { getPostLoginRoute } from "@/lib/auth-routing";
@@ -94,7 +95,23 @@ export default function RegisterPage() {
               of the session and restore your access automatically.
             </p>
 
-            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+            <GoogleSignInPanel
+              router={router}
+              className="mt-6"
+              title="Start with Google"
+              description="If you prefer Google sign-in, we&apos;ll create or link your SPCS account instantly."
+              successMessage="Google account connected successfully"
+            />
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#e8eef6]" />
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#94a3b8]">
+                Or create with email
+              </span>
+              <div className="h-px flex-1 bg-[#e8eef6]" />
+            </div>
+
+            <form className="space-y-5" onSubmit={handleSubmit}>
               <AuthField label="Full name">
                 <div className="flex items-center rounded-[20px] border border-[#e5ebf3] bg-[#f9fbff] px-4">
                   <HiUser className="text-lg text-[#94a3b8]" />
