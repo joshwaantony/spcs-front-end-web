@@ -1,13 +1,13 @@
 export const AUTH_PUBLIC_PATHS = [
   "/login",
+  "/register",
+  "/logout",
   "/admin/login",
-  "/verify-otp",
-  "/complete-profile",
   "/forgot-password",
   "/reset-password",
 ];
 
-export const ACCOUNT_HOME_PATH = "/account";
+export const ACCOUNT_HOME_PATH = "/home";
 export const ADMIN_HOME_PATH = "/admin";
 
 export function getPrimaryRole(user) {
@@ -25,10 +25,6 @@ export function getPrimaryRole(user) {
 export function getPostLoginRoute(user) {
   if (!user) {
     return "/login";
-  }
-
-  if (user.profileCompleted === false) {
-    return "/complete-profile";
   }
 
   const role = getPrimaryRole(user);

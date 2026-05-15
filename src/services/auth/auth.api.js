@@ -1,33 +1,41 @@
 import api from "@/lib/admin-axios";
+import { getCartSessionHeaders } from "@/lib/cart-session";
 
 export const registerUser = async (payload) => {
-  return api.post("/v1/auth/register", payload);
+  return api.post("/auth/register", payload, {
+    headers: getCartSessionHeaders(),
+  });
 };
 
 export const loginUser = async ({ email, password }) => {
-  return api.post("/auth/login", {
-    email,
-    password,
-  });
+  return api.post(
+    "/auth/login",
+    {
+      email,
+      password,
+    },
+    {
+      headers: getCartSessionHeaders(),
+    }
+  );
+};
+
+export const loginWithGoogle = async ({ idToken }) => {
+  return api.post(
+    "/auth/google",
+    {
+      idToken,
+    },
+    {
+      headers: getCartSessionHeaders(),
+    }
+  );
 };
 
 export const loginAdmin = async ({ email, password }) => {
   return api.post("/auth/admin/login", {
     email,
     password,
-  });
-};
-
-export const requestOtp = async ({ phone }) => {
-  return api.post("/auth/otp/request", {
-    phone,
-  });
-};
-
-export const verifyOtp = async ({ phone, code }) => {
-  return api.post("/auth/otp/verify", {
-    phone,
-    code,
   });
 };
 
@@ -39,12 +47,8 @@ export const refreshAuthSession = async () => {
   return api.post("/auth/refresh", {});
 };
 
-export const logoutAdmin = async () => {
+export const logoutAuth = async () => {
   return api.post("/auth/logout", {});
-};
-
-export const completeProfile = async (payload) => {
-  return api.post("/auth/complete-profile", payload);
 };
 
 export const forgotPassword = async ({ email }) => {

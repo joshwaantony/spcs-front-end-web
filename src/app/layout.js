@@ -1,6 +1,7 @@
 import "./globals.css";
 import AppToaster from "@/components/common/AppToaster";
 import AuthSessionManager from "@/components/auth/AuthSessionManager";
+import CartSessionManager from "@/components/cart/CartSessionManager";
 
 export const metadata = {
   title: "SPCS India - The Home of Malayalam Literature",
@@ -15,6 +16,7 @@ export default function RootLayout({ children }) {
       </head>
       <body className="bg-background-light dark:bg-background-dark text-text-main antialiased overflow-x-hidden flex flex-col min-h-screen font-sans">
         <AuthSessionManager />
+        <CartSessionManager />
         {children}
         <AppToaster />
       </body>

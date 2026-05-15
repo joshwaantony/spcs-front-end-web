@@ -29,6 +29,7 @@ export default function AuthSessionManager() {
     }
 
     const isLoggedIn = isAuthenticated && !!user;
+    const isLogoutPage = pathname === "/logout";
 
     if (!isLoggedIn) {
       if (isAuthPage(pathname)) {
@@ -47,17 +48,11 @@ export default function AuthSessionManager() {
       return;
     }
 
-    if (user.profileCompleted === false && pathname !== "/complete-profile") {
-      router.replace("/complete-profile");
+    if (isLogoutPage) {
       return;
     }
 
     const primaryRole = getPrimaryRole(user);
-
-    if (pathname === "/complete-profile" && user.profileCompleted !== false) {
-      router.replace(getPostLoginRoute(user));
-      return;
-    }
 
     if (shouldRequireAdmin(pathname) && primaryRole !== "ADMIN") {
       router.replace(getPostLoginRoute(user));
