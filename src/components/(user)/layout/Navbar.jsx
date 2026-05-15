@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
   ChevronDown,
+  LogOut,
   Menu,
   ShoppingCart,
   User,
   X,
 } from "lucide-react";
+import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 
 const STORE_LINKS = [
   {
@@ -50,6 +52,8 @@ export default function Navbar() {
   const [salesOpen, setSalesOpen] = useState(false);
   const [programsOpen, setProgramsOpen] = useState(false);
   const pathname = usePathname();
+  const user = useAdminAuthStore((state) => state.user);
+  const isAuthenticated = useAdminAuthStore((state) => state.isAuthenticated);
 
   const isStoreActive =
     pathname === "/book-store" ||
@@ -121,9 +125,25 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-1.5 min-[360px]:gap-2 md:gap-3">
-            <ActionLink href="/profile" label="Profile">
-              <User size={18} />
-            </ActionLink>
+            {isAuthenticated ? (
+              <>
+                <UserSummary user={user} />
+                <Link
+                  href="/logout"
+                  className="hidden h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 md:inline-flex"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </Link>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="hidden h-11 items-center rounded-full bg-[#126DEC] px-5 text-sm font-black text-white shadow-[0_18px_32px_-22px_rgba(18,109,236,0.65)] transition hover:-translate-y-0.5 hover:bg-[#0f60d0] md:inline-flex"
+              >
+                Login
+              </Link>
+            )}
             <ActionLink href="/cart" label="Cart">
               <ShoppingCart size={18} />
             </ActionLink>
@@ -259,6 +279,40 @@ export default function Navbar() {
                 onClick={() => setOpen(false)}
               />
             </div>
+
+            <div className="mt-5 rounded-[22px] border border-slate-200 bg-slate-50 p-3">
+              {isAuthenticated ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">
+                      Signed in
+                    </p>
+                    <p className="mt-1 text-sm font-black text-slate-900">
+                      {user?.name || "SPCS Reader"}
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">
+                      {user?.email || "Account active"}
+                    </p>
+                  </div>
+                  <Link
+                    href="/logout"
+                    onClick={() => setOpen(false)}
+                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </Link>
+                </div>
+              ) : (
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#126DEC] px-4 text-sm font-black text-white transition hover:bg-[#0f60d0]"
+                >
+                  Login
+                </Link>
+              )}
+            </div>
           </div>
 
           <div className="border-t border-slate-200 px-3 py-4 min-[360px]:px-4">
@@ -352,6 +406,27 @@ function ActionLink({ href, label, children }) {
       className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 md:h-11 md:w-11"
     >
       {children}
+    </Link>
+  );
+}
+
+function UserSummary({ user }) {
+  return (
+    <Link
+      href="/account"
+      className="hidden items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-2 text-left transition hover:-translate-y-0.5 hover:border-slate-300 md:inline-flex"
+    >
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eef5ff] text-[#126DEC]">
+        <User size={16} />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+          Reader
+        </span>
+        <span className="block max-w-[120px] truncate text-sm font-black text-slate-900">
+          {user?.name || "SPCS Reader"}
+        </span>
+      </span>
     </Link>
   );
 }

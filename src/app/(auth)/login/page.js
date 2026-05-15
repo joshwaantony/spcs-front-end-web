@@ -1,277 +1,307 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  HiArrowRight,
+  HiEye,
+  HiEyeOff,
+  HiLockClosed,
+  HiMail,
+} from "react-icons/hi";
+import { FcGoogle } from "react-icons/fc";
 import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 import { useToastStore } from "@/store/ui/toast.store";
 import { getPostLoginRoute } from "@/lib/auth-routing";
-import { HiEye, HiEyeOff, HiLockClosed, HiMail, HiPhone } from "react-icons/hi";
 
-const tabs = [
-  { id: "otp", label: "Phone OTP" },
-  { id: "email", label: "Email Login" },
-];
-
-function AuthHero() {
+function AuthHeroPanel() {
   return (
-    <section className="hidden lg:flex flex-col space-y-8">
-      <div className="space-y-4">
-        <h1 className="text-4xl xl:text-5xl font-bold leading-tight text-darkGray">
-          The Home of <br />
-          <span className="text-[#008080]">Malayalam Literature</span>
+    <section className="hidden rounded-[36px] border border-white/70 bg-[linear-gradient(145deg,#0f172a_0%,#123767_42%,#126DEC_100%)] p-10 text-white shadow-[0_40px_120px_-48px_rgba(18,109,236,0.6)] lg:flex lg:min-h-[760px] lg:flex-col lg:justify-between">
+      <div>
+        <p className="text-[11px] font-black uppercase tracking-[0.26em] text-white/65">
+          Reader Access
+        </p>
+        <h1 className="mt-4 max-w-xl text-5xl font-black leading-[1.02] tracking-[-0.04em]">
+          Sign in to your Malayalam reading world.
         </h1>
-
-        <p className="text-base xl:text-lg text-mediumGray max-w-lg leading-relaxed">
-          Sahithya Pravarthaka Co-operative Society (SPCS) connects readers,
-          writers, and administrators through one shared platform rooted in a
-          rich literary legacy.
+        <p className="mt-5 max-w-lg text-base font-medium leading-7 text-white/74">
+          Continue with your SPCS account to browse purchases, manage your shelf,
+          and keep your reading journey in sync.
         </p>
       </div>
 
-      <div className="relative pt-8">
-        <div className="w-56 xl:w-64 h-72 xl:h-80 bg-gray-100 rounded-sm shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex items-center justify-center overflow-hidden transform -rotate-3 hover:rotate-0 transition-transform duration-500">
-          <img
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxIMYat20IaWJw6a6nBSqWnVPNPrq6Ml6SM0PfCDSOkUgmQWjiv1BsndkXAywFE6OszLPxg63Dj_UHgaV3vzdKtMDBNqJa-4ZqKFufbCcZCi-fk8X0hawD9L0bh0aJOCbIhapfFh7H9quT9w_twshrVEtVW4ajUv2U0WKL2hkqQuK8hcjRui8snkSXY7kLdTNhZSL8xpCrkGQhs_rh_WscM4yWi9kOHU--Rv0eqtXY45y2yfbagDQG8mG9ktxL06WdHJ3DNeG_vg0"
-            alt="Featured Book Cover"
-            className="w-full h-full object-cover"
-          />
+      <div className="grid gap-4">
+        <div className="rounded-[28px] border border-white/14 bg-white/10 p-6 backdrop-blur">
+          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/60">
+            What you get
+          </p>
+          <div className="mt-4 grid gap-3">
+            <FeatureLine label="Restore your reading session instantly" />
+            <FeatureLine label="Keep purchases and cart in one place" />
+            <FeatureLine label="Move between web and future mobile touchpoints" />
+          </div>
         </div>
 
-        <div className="absolute -bottom-4 -left-4 w-20 xl:w-24 h-20 xl:h-24 bg-spcsTealLight -z-10 rounded-full" />
+        <div className="rounded-[28px] border border-white/12 bg-[#f8fbff] p-6 text-[#111827]">
+          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#7b8ca6]">
+            Support note
+          </p>
+          <p className="mt-3 text-sm font-semibold leading-6 text-[#5f7391]">
+            If your account was created with Google, use the Google sign-in path
+            instead of password login.
+          </p>
+        </div>
       </div>
     </section>
   );
 }
 
+function FeatureLine({ label }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/16 text-white">
+        <HiArrowRight size={16} />
+      </span>
+      <p className="text-sm font-semibold text-white/85">{label}</p>
+    </div>
+  );
+}
+
 export default function LoginPage() {
-  const [activeTab, setActiveTab] = useState("otp");
-  const [phone, setPhone] = useState("");
-  const [emailForm, setEmailForm] = useState({
+  const [form, setForm] = useState({
     email: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-
-  const requestOtp = useAdminAuthStore((state) => state.requestOtp);
+  const [showGoogleTokenPanel, setShowGoogleTokenPanel] = useState(false);
+  const [googleIdToken, setGoogleIdToken] = useState("");
   const loginWithEmail = useAdminAuthStore((state) => state.loginWithEmail);
+  const loginWithGoogle = useAdminAuthStore((state) => state.loginWithGoogle);
   const loading = useAdminAuthStore((state) => state.loading);
+  const error = useAdminAuthStore((state) => state.error);
   const showToast = useToastStore((state) => state.showToast);
   const router = useRouter();
 
-  const handleOtpSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      await requestOtp({ phone: phone.trim() });
-      showToast({
-        type: "success",
-        message: "OTP sent successfully",
-      });
-      router.push(`/verify-otp?phone=${encodeURIComponent(phone.trim())}`);
-    } catch (error) {
-      showToast({
-        type: "error",
-        message: error.message || "Unable to send OTP",
-      });
+  const inlineError = useMemo(() => {
+    if (!error) {
+      return "";
     }
-  };
 
-  const handleEmailSubmit = async (e) => {
-    e.preventDefault();
+    if (/google login/i.test(error)) {
+      return "This account uses Google sign-in. Please continue with Google.";
+    }
+
+    return error;
+  }, [error]);
+
+  const handleEmailSubmit = async (event) => {
+    event.preventDefault();
 
     try {
       const user = await loginWithEmail({
-        email: emailForm.email.trim(),
-        password: emailForm.password,
+        email: form.email.trim(),
+        password: form.password,
       });
 
       showToast({
         type: "success",
         message: "Logged in successfully",
       });
+
       router.push(getPostLoginRoute(user));
-    } catch (error) {
+    } catch (authError) {
       showToast({
         type: "error",
-        message: error.message || "Unable to login right now.",
+        message: authError.message || "Unable to sign in right now.",
+      });
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    if (!googleIdToken?.trim()) {
+      showToast({
+        type: "error",
+        message: "Paste a Google ID token to continue.",
+      });
+      return;
+    }
+
+    try {
+      const user = await loginWithGoogle({
+        idToken: googleIdToken.trim(),
+      });
+
+      showToast({
+        type: "success",
+        message: "Google login successful",
+      });
+
+      setGoogleIdToken("");
+      setShowGoogleTokenPanel(false);
+      router.push(getPostLoginRoute(user));
+    } catch (authError) {
+      showToast({
+        type: "error",
+        message: authError.message || "Google sign-in failed.",
       });
     }
   };
 
   return (
-    <div className="font-sans text-darkGray min-h-screen flex flex-col relative overflow-x-hidden">
-      <div aria-hidden="true" className="absolute top-0 right-0 w-full h-full -z-10 overflow-hidden">
-        <div
-          className="absolute top-[-10%] right-[-5%] w-[60%] md:w-[50%] h-[60%]"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(0,128,128,0.05) 0%, rgba(255,255,255,0) 70%)",
-            borderRadius: "40% 60% 70% 30% / 40% 50% 60% 50%",
-          }}
-        />
+    <div className="min-h-screen bg-[linear-gradient(145deg,#f6f9ff_0%,#fbfdff_46%,#f5f8ff_100%)] px-4 py-8 sm:px-6 lg:px-10">
+      <div className="mx-auto grid max-w-[1360px] gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        <AuthHeroPanel />
 
-        <div
-          className="absolute bottom-[10%] left-[-10%] w-[60%] md:w-[40%] h-[50%]"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(0,128,128,0.03) 0%, rgba(255,255,255,0) 70%)",
-            borderRadius: "50% 50% 30% 70% / 50% 60% 40% 40%",
-          }}
-        />
-      </div>
+        <section className="flex min-h-[calc(100vh-4rem)] items-center justify-center lg:min-h-0">
+          <div className="w-full max-w-[560px] rounded-[34px] border border-white/80 bg-white/95 p-6 shadow-[0_30px_90px_-50px_rgba(15,23,42,0.3)] backdrop-blur sm:p-8 md:p-10">
+            <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#7b8ca6]">
+              Welcome back
+            </p>
+            <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-[#111827] sm:text-[2.4rem]">
+              Sign in to continue
+            </h2>
+            <p className="mt-3 text-sm font-medium leading-7 text-[#64748b] sm:text-base">
+              Use your email and password to restore your session. We&apos;ll
+              handle refresh and account recovery in the background.
+            </p>
 
-      <main className="flex-grow flex items-center justify-center py-10 md:py-12 px-4 sm:px-6 md:px-12 lg:px-[120px]">
-        <div className="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-          <AuthHero />
-
-          <section className="flex justify-center lg:justify-end">
-            <div className="w-full max-w-md sm:max-w-lg bg-white rounded-[12px] p-6 sm:p-8 md:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.1)] border border-gray-50">
-              <div className="mb-6 sm:mb-8">
-                <span className="block text-[#008080] text-xs font-bold tracking-widest mb-2">
-                  WELCOME
-                </span>
-                <h2 className="text-xl sm:text-2xl font-bold text-darkGray mb-2">
-                  Sign in to your account
-                </h2>
-                <p className="text-mediumGray text-sm sm:text-base">
-                  Choose your preferred login method and continue to your role-based dashboard.
-                </p>
-              </div>
-
-              <div className="mb-6 grid grid-cols-2 rounded-[8px] bg-[#f2f7f7] p-1">
-                {tabs.map((tab) => (
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() =>
+                  setShowGoogleTokenPanel((current) => !current)
+                }
+                disabled={loading}
+                className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#e3ebf6] bg-white px-5 text-sm font-bold text-[#111827] transition hover:border-[#c8d7f2] hover:bg-[#f9fbff] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <FcGoogle size={20} />
+                Continue with Google
+              </button>
+              <p className="mt-2 text-xs font-medium text-[#7b8ca6]">
+                Use this if your SPCS account is connected to Google.
+              </p>
+              {showGoogleTokenPanel ? (
+                <div className="mt-4 rounded-[22px] border border-[#e3ebf6] bg-[#f9fbff] p-4">
+                  <label className="block">
+                    <span className="text-sm font-bold text-[#1f2937]">
+                      Google ID token
+                    </span>
+                    <textarea
+                      value={googleIdToken}
+                      onChange={(event) => setGoogleIdToken(event.target.value)}
+                      rows={4}
+                      placeholder="Paste the Google ID token from your SDK flow"
+                      className="mt-2 w-full rounded-[18px] border border-[#dce6f3] bg-white px-4 py-3 text-sm font-medium text-[#111827] outline-none placeholder:text-[#94a3b8]"
+                    />
+                  </label>
                   <button
-                    key={tab.id}
                     type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`rounded-[6px] px-4 py-2.5 text-sm font-semibold transition ${
-                      activeTab === tab.id
-                        ? "bg-white text-[#008080] shadow-sm"
-                        : "text-mediumGray hover:text-darkGray"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-
-              {activeTab === "otp" ? (
-                <form className="space-y-6" onSubmit={handleOtpSubmit}>
-                  <div className="space-y-2">
-                    <label htmlFor="phone" className="text-sm font-semibold text-darkGray">
-                      Phone Number
-                    </label>
-
-                    <div className="flex items-center rounded-[6px] border border-gray-300 bg-white focus-within:ring-1 focus-within:ring-[#008080]">
-                      <span className="px-3 text-mediumGray">
-                        <HiPhone className="text-lg" />
-                      </span>
-                      <input
-                        id="phone"
-                        type="tel"
-                        placeholder="+919876543210"
-                        className="flex-1 rounded-[6px] border-0 bg-transparent p-3 text-sm focus:outline-none"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        autoComplete="tel"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
+                    onClick={handleGoogleLogin}
                     disabled={loading}
-                    className="w-full bg-[#008080] hover:bg-[#006666] disabled:bg-[#008080]/70 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[6px] transition-colors shadow-md"
+                    className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#111827] px-5 text-sm font-black text-white transition hover:bg-[#126DEC] disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {loading ? "Sending OTP..." : "Send OTP"}
+                    {loading ? "Connecting Google..." : "Sign in with pasted token"}
                   </button>
-                </form>
-              ) : (
-                <form className="space-y-6" onSubmit={handleEmailSubmit}>
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-semibold text-darkGray">
-                      Email Address
-                    </label>
-                    <div className="flex items-center rounded-[6px] border border-gray-300 bg-white focus-within:ring-1 focus-within:ring-[#008080]">
-                      <span className="px-3 text-mediumGray">
-                        <HiMail className="text-lg" />
-                      </span>
-                      <input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        className="flex-1 rounded-[6px] border-0 bg-transparent p-3 text-sm focus:outline-none"
-                        value={emailForm.email}
-                        onChange={(e) =>
-                          setEmailForm((current) => ({
-                            ...current,
-                            email: e.target.value,
-                          }))
-                        }
-                        autoComplete="email"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="password" className="text-sm font-semibold text-darkGray">
-                      Password
-                    </label>
-                    <div className="flex items-center rounded-[6px] border border-gray-300 bg-white focus-within:ring-1 focus-within:ring-[#008080]">
-                      <span className="px-3 text-mediumGray">
-                        <HiLockClosed className="text-lg" />
-                      </span>
-                      <input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        className="flex-1 rounded-[6px] border-0 bg-transparent p-3 text-sm focus:outline-none"
-                        value={emailForm.password}
-                        onChange={(e) =>
-                          setEmailForm((current) => ({
-                            ...current,
-                            password: e.target.value,
-                          }))
-                        }
-                        autoComplete="current-password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((current) => !current)}
-                        className="px-3 text-mediumGray transition-colors hover:text-[#008080]"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <HiEyeOff className="text-lg" /> : <HiEye className="text-lg" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-[#008080] hover:bg-[#006666] disabled:bg-[#008080]/70 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-[6px] transition-colors shadow-md"
-                  >
-                    {loading ? "Signing In..." : "Sign In"}
-                  </button>
-                </form>
-              )}
-
-              <div className="mt-8 flex items-center justify-between gap-4 border-t border-gray-100 pt-6 text-sm text-mediumGray">
-                <Link href="/forgot-password" className="font-medium text-[#008080] hover:underline">
-                  Forgot password?
-                </Link>
-                <Link href="/admin/login" className="font-medium text-[#008080] hover:underline">
-                  Admin login
-                </Link>
-              </div>
+                </div>
+              ) : null}
             </div>
-          </section>
-        </div>
-      </main>
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-[#e8eef6]" />
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#94a3b8]">
+                Or use email
+              </span>
+              <div className="h-px flex-1 bg-[#e8eef6]" />
+            </div>
+
+            <form className="space-y-5" onSubmit={handleEmailSubmit}>
+              <AuthField label="Email address">
+                <div className="flex items-center rounded-[20px] border border-[#e5ebf3] bg-[#f9fbff] px-4">
+                  <HiMail className="text-lg text-[#94a3b8]" />
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
+                    }
+                    placeholder="you@example.com"
+                    className="h-14 w-full bg-transparent px-3 text-sm font-semibold text-[#111827] outline-none placeholder:text-[#94a3b8]"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </AuthField>
+
+              <AuthField label="Password">
+                <div className="flex items-center rounded-[20px] border border-[#e5ebf3] bg-[#f9fbff] px-4">
+                  <HiLockClosed className="text-lg text-[#94a3b8]" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        password: event.target.value,
+                      }))
+                    }
+                    placeholder="Enter your password"
+                    className="h-14 w-full bg-transparent px-3 text-sm font-semibold text-[#111827] outline-none placeholder:text-[#94a3b8]"
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    className="text-[#94a3b8] transition hover:text-[#126DEC]"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <HiEyeOff size={20} /> : <HiEye size={20} />}
+                  </button>
+                </div>
+              </AuthField>
+
+              {inlineError ? (
+                <div className="rounded-[18px] border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+                  {inlineError}
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#126DEC] px-6 text-sm font-black text-white shadow-[0_20px_36px_-22px_rgba(18,109,236,0.6)] transition hover:-translate-y-0.5 hover:bg-[#0f60d0] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Signing you in..." : "Sign in"}
+              </button>
+            </form>
+
+            <div className="mt-6 flex flex-col gap-3 border-t border-[#eef2f7] pt-6 text-sm font-semibold text-[#64748b] sm:flex-row sm:items-center sm:justify-between">
+              <Link href="/forgot-password" className="transition hover:text-[#126DEC]">
+                Forgot password?
+              </Link>
+              <Link href="/register" className="transition hover:text-[#126DEC]">
+                Create a new account
+              </Link>
+              <Link href="/admin/login" className="transition hover:text-[#126DEC]">
+                Admin sign in
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
+  );
+}
+
+function AuthField({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-bold text-[#1f2937]">{label}</span>
+      {children}
+    </label>
   );
 }

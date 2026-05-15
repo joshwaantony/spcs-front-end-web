@@ -1,128 +1,15 @@
-
-
-// "use client";
-
-// import { create } from "zustand";
-// import {
-//   requestAdminOtp,
-//   verifyAdminOtp,
-// } from "@/services/admin/auth.api";
-
-// export const useAdminAuthStore = create((set) => ({
-//   phone: "",
-//   loading: false,
-//   otpSent: false,
-//   isAuthenticated: false,
-//   error: null,
-
-//   // 🔹 SEND OTP
-//   sendOtp: async (phone) => {
-//     try {
-//       set({
-//         loading: true,
-//         error: null,
-//       });
-
-//       const data = await requestAdminOtp(phone);
-
-//       if (data.success) {
-//         set({
-//           phone,
-//           otpSent: true,
-//           loading: false,
-//         });
-//       } else {
-//         set({
-//           loading: false,
-//           error: data.message || "Failed to send OTP",
-//         });
-//       }
-
-//       return data;
-//     } catch (error) {
-//       set({
-//         loading: false,
-//         error: error.message || "Something went wrong",
-//       });
-//       throw error;
-//     }
-//   },
-
-//   // 🔹 VERIFY OTP
-//   verifyOtp: async ({ phone, otp }) => {
-//     try {
-//       set({
-//         loading: true,
-//         error: null,
-//       });
-
-//       const data = await verifyAdminOtp({ phone, otp });
-
-//       if (data.success) {
-//         const { token, refreshToken } = data.data;
-
-//         // ✅ store tokens
-//         localStorage.setItem("spcs_admin_token_key_prod", token);
-//         localStorage.setItem("spcs_admin_refresh_token", refreshToken);
-
-//         set({
-//           loading: false,
-//           isAuthenticated: true,
-//         });
-//       } else {
-//         set({
-//           loading: false,
-//           error: data.message || "Invalid OTP",
-//         });
-//       }
-
-//       return data;
-//     } catch (error) {
-//       set({
-//         loading: false,
-//         error: error.message || "Verification failed",
-//       });
-//       throw error;
-//     }
-//   },
-
-//   // 🔹 LOGOUT
-//   logout: () => {
-//     localStorage.removeItem("spcs_admin_token_key_prod");
-//     localStorage.removeItem("spcs_admin_refresh_token");
-
-//     set({
-//       phone: "",
-//       otpSent: false,
-//       isAuthenticated: false,
-//       error: null,
-//     });
-//   },
-
-//   // 🔹 RESET (optional)
-//   reset: () => {
-//     set({
-//       phone: "",
-//       otpSent: false,
-//       loading: false,
-//       error: null,
-//     });
-//   },
-// }));
-
-
 "use client";
 
 import { create } from "zustand";
 import {
-  completeProfile,
+  forgotPassword,
   getCurrentUser,
   loginAdmin,
   loginUser,
-  logoutAdmin,
+  loginWithGoogle,
+  logoutAuth,
   refreshAuthSession,
-  requestOtp,
-  verifyOtp,
+  registerUser,
 } from "@/services/auth/auth.api";
 import {
   AUTH_SESSION_EVENT,
@@ -133,34 +20,46 @@ import {
 } from "@/lib/auth-session";
 
 const getAccessTokenFromResponse = (data) =>
-  data?.data?.accessToken || data?.data?.token || data?.accessToken || null;
+  data?.data?.accessToken || data?.accessToken || null;
 
 const getUserFromResponse = (data) =>
-  data?.data?.user || data?.user || data?.data || null;
+  data?.data?.user || data?.user || null;
 
 const normalizeSessionFromResponse = (data) => ({
   accessToken: getAccessTokenFromResponse(data),
   user: getUserFromResponse(data),
 });
 
-const clearSession = () => clearStoredSession();
-
 let authSessionListenerAttached = false;
+
+const clearSession = () => clearStoredSession();
 
 export const useAdminAuthStore = create((set, get) => ({
   user: null,
+  accessToken: null,
   loading: false,
   isAuthenticated: false,
   error: null,
-  pendingPhone: "",
   bootstrapped: false,
 
   setSession: ({ accessToken, user }) => {
     persistSession({ accessToken, user });
 
     set({
-      user: user || null,
-      isAuthenticated: !!user || !!accessToken,
+      accessToken: accessToken ?? readStoredAccessToken(),
+      user: user ?? readStoredUser(),
+      isAuthenticated: !!(accessToken ?? readStoredAccessToken()),
+      error: null,
+    });
+  },
+
+  clearSessionState: () => {
+    clearSession();
+
+    set({
+      user: null,
+      accessToken: null,
+      isAuthenticated: false,
       error: null,
     });
   },
@@ -170,10 +69,14 @@ export const useAdminAuthStore = create((set, get) => ({
     const user = getUserFromResponse(data);
 
     if (!data?.success || !user) {
-      throw new Error(data?.message || "Unable to load user");
+      throw new Error(data?.message || "Unable to load your account");
     }
 
-    get().setSession({ user });
+    get().setSession({
+      accessToken: readStoredAccessToken(),
+      user,
+    });
+
     return user;
   },
 
@@ -184,7 +87,10 @@ export const useAdminAuthStore = create((set, get) => ({
       throw new Error(data?.message || "Authentication failed");
     }
 
-    persistSession({ accessToken, user });
+    persistSession({
+      accessToken,
+      user,
+    });
 
     try {
       return await get().fetchMe();
@@ -211,6 +117,7 @@ export const useAdminAuthStore = create((set, get) => ({
           if (detail.type === "cleared") {
             set({
               user: null,
+              accessToken: null,
               isAuthenticated: false,
             });
             return;
@@ -218,6 +125,7 @@ export const useAdminAuthStore = create((set, get) => ({
 
           set({
             user: detail.user || readStoredUser(),
+            accessToken: detail.accessToken || readStoredAccessToken(),
             isAuthenticated: !!(detail.accessToken || readStoredAccessToken()),
           });
         });
@@ -225,14 +133,23 @@ export const useAdminAuthStore = create((set, get) => ({
         authSessionListenerAttached = true;
       }
 
-      const storedUser = readStoredUser();
       const existingToken = readStoredAccessToken();
+      const existingUser = readStoredUser();
 
-      if (storedUser || existingToken) {
+      if (existingToken) {
         set({
-          user: storedUser,
-          isAuthenticated: !!existingToken,
+          accessToken: existingToken,
+          user: existingUser,
+          isAuthenticated: true,
         });
+
+        try {
+          await get().fetchMe();
+          set({ bootstrapped: true });
+          return;
+        } catch {
+          clearSession();
+        }
       }
 
       try {
@@ -240,49 +157,65 @@ export const useAdminAuthStore = create((set, get) => ({
         const accessToken = getAccessTokenFromResponse(refreshData);
         const refreshedUser = getUserFromResponse(refreshData);
 
-        if (accessToken) {
-          persistSession({
-            accessToken,
-            user: refreshedUser || storedUser,
-          });
+        if (!refreshData?.success || !accessToken) {
+          throw new Error(refreshData?.message || "Session refresh failed");
+        }
 
-          set({
-            user: refreshedUser || storedUser,
-            isAuthenticated: true,
-          });
+        persistSession({
+          accessToken,
+          user: refreshedUser,
+        });
+
+        set({
+          accessToken,
+          user: refreshedUser,
+          isAuthenticated: true,
+        });
+
+        if (!refreshedUser) {
+          await get().fetchMe();
         }
       } catch {
         clearSession();
         set({
+          accessToken: null,
           user: null,
           isAuthenticated: false,
         });
       }
-
-      if (
-        typeof window !== "undefined" &&
-        readStoredAccessToken()
-      ) {
-        if (!get().user) {
-          await get().fetchMe();
-        }
-      } else {
-        clearSession();
-        set({
-          user: null,
-          isAuthenticated: false,
-        });
-      }
-    } catch {
-      clearSession();
-      set({
-        user: null,
-        isAuthenticated: false,
-      });
     } finally {
       set({
         bootstrapped: true,
       });
+    }
+  },
+
+  registerUser: async ({ name, email, password }) => {
+    try {
+      set({ loading: true, error: null });
+
+      const data = await registerUser({
+        name,
+        email,
+        password,
+      });
+
+      const user = await get().hydrateSessionFromAuthResponse(data);
+
+      set({
+        accessToken: readStoredAccessToken(),
+        user,
+        loading: false,
+        isAuthenticated: true,
+      });
+
+      return user;
+    } catch (error) {
+      set({
+        loading: false,
+        error: error.message || "Unable to create your account",
+      });
+      throw error;
     }
   },
 
@@ -294,6 +227,7 @@ export const useAdminAuthStore = create((set, get) => ({
       const user = await get().hydrateSessionFromAuthResponse(data);
 
       set({
+        accessToken: readStoredAccessToken(),
         user,
         loading: false,
         isAuthenticated: true,
@@ -304,6 +238,30 @@ export const useAdminAuthStore = create((set, get) => ({
       set({
         loading: false,
         error: error.message || "Login failed",
+      });
+      throw error;
+    }
+  },
+
+  loginWithGoogle: async ({ idToken }) => {
+    try {
+      set({ loading: true, error: null });
+
+      const data = await loginWithGoogle({ idToken });
+      const user = await get().hydrateSessionFromAuthResponse(data);
+
+      set({
+        accessToken: readStoredAccessToken(),
+        user,
+        loading: false,
+        isAuthenticated: true,
+      });
+
+      return user;
+    } catch (error) {
+      set({
+        loading: false,
+        error: error.message || "Google login failed",
       });
       throw error;
     }
@@ -322,6 +280,7 @@ export const useAdminAuthStore = create((set, get) => ({
       }
 
       set({
+        accessToken: readStoredAccessToken(),
         user,
         loading: false,
         isAuthenticated: true,
@@ -331,113 +290,59 @@ export const useAdminAuthStore = create((set, get) => ({
     } catch (error) {
       clearSession();
       set({
+        accessToken: null,
         user: null,
         isAuthenticated: false,
         loading: false,
-        error: error.message || "Login failed",
+        error: error.message || "Admin login failed",
       });
       throw error;
     }
   },
 
-  requestOtp: async ({ phone }) => {
+  refreshSession: async () => {
+    const data = await refreshAuthSession();
+    const accessToken = getAccessTokenFromResponse(data);
+    const user = getUserFromResponse(data);
+
+    if (!data?.success || !accessToken) {
+      throw new Error(data?.message || "Session refresh failed");
+    }
+
+    get().setSession({
+      accessToken,
+      user,
+    });
+
+    return user || get().fetchMe();
+  },
+
+  sendForgotPassword: async ({ email }) => {
     try {
       set({ loading: true, error: null });
-
-      const data = await requestOtp({ phone });
-
-      if (!data?.success) {
-        throw new Error(data?.message || "Unable to send OTP");
-      }
-
-      set({
-        pendingPhone: phone,
-        loading: false,
-      });
-
+      const data = await forgotPassword({ email });
+      set({ loading: false });
       return data;
     } catch (error) {
       set({
         loading: false,
-        error: error.message || "Unable to send OTP",
+        error: error.message || "Unable to send reset email",
       });
       throw error;
     }
-  },
-
-  verifyOtp: async ({ phone, code }) => {
-    try {
-      set({ loading: true, error: null });
-
-      const data = await verifyOtp({ phone, code });
-      const user = await get().hydrateSessionFromAuthResponse(data);
-
-      set({
-        user,
-        pendingPhone: "",
-        loading: false,
-        isAuthenticated: true,
-      });
-
-      return user;
-    } catch (error) {
-      set({
-        loading: false,
-        error: error.message || "OTP verification failed",
-      });
-      throw error;
-    }
-  },
-
-  completeProfile: async (payload) => {
-    try {
-      set({ loading: true, error: null });
-
-      const data = await completeProfile(payload);
-
-      if (!data?.success) {
-        throw new Error(data?.message || "Unable to complete profile");
-      }
-
-      const user = await get().fetchMe();
-
-      set({
-        user,
-        loading: false,
-      });
-
-      return user;
-    } catch (error) {
-      set({
-        loading: false,
-        error: error.message || "Unable to complete profile",
-      });
-      throw error;
-    }
-  },
-
-  initAuth: () => {
-    const token = readStoredAccessToken();
-    const user = readStoredUser();
-
-    set({
-      user,
-      isAuthenticated: !!token,
-      bootstrapped: false,
-    });
   },
 
   logout: async () => {
     try {
-      await logoutAdmin();
-    } catch (error) {
-      console.error("Logout API failed:", error);
+      await logoutAuth();
+    } catch {
+      // Ignore logout API failures and clear client state anyway.
     } finally {
       clearSession();
 
       set({
         user: null,
-        pendingPhone: "",
+        accessToken: null,
         isAuthenticated: false,
         error: null,
         loading: false,
@@ -450,7 +355,6 @@ export const useAdminAuthStore = create((set, get) => ({
     set({
       loading: false,
       error: null,
-      pendingPhone: "",
     });
   },
 }));
