@@ -10,10 +10,10 @@ import {
   HiLockClosed,
   HiMail,
 } from "react-icons/hi";
-import { FcGoogle } from "react-icons/fc";
 import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
 import { useToastStore } from "@/store/ui/toast.store";
 import { getPostLoginRoute } from "@/lib/auth-routing";
+import GoogleSignInPanel from "@/components/auth/GoogleSignInPanel";
 
 function AuthHeroPanel() {
   return (
@@ -74,10 +74,7 @@ export default function LoginPage() {
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showGoogleTokenPanel, setShowGoogleTokenPanel] = useState(false);
-  const [googleIdToken, setGoogleIdToken] = useState("");
   const loginWithEmail = useAdminAuthStore((state) => state.loginWithEmail);
-  const loginWithGoogle = useAdminAuthStore((state) => state.loginWithGoogle);
   const loading = useAdminAuthStore((state) => state.loading);
   const error = useAdminAuthStore((state) => state.error);
   const showToast = useToastStore((state) => state.showToast);
@@ -118,36 +115,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    if (!googleIdToken?.trim()) {
-      showToast({
-        type: "error",
-        message: "Paste a Google ID token to continue.",
-      });
-      return;
-    }
-
-    try {
-      const user = await loginWithGoogle({
-        idToken: googleIdToken.trim(),
-      });
-
-      showToast({
-        type: "success",
-        message: "Google login successful",
-      });
-
-      setGoogleIdToken("");
-      setShowGoogleTokenPanel(false);
-      router.push(getPostLoginRoute(user));
-    } catch (authError) {
-      showToast({
-        type: "error",
-        message: authError.message || "Google sign-in failed.",
-      });
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[linear-gradient(145deg,#f6f9ff_0%,#fbfdff_46%,#f5f8ff_100%)] px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto grid max-w-[1360px] gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -166,46 +133,13 @@ export default function LoginPage() {
               handle refresh and account recovery in the background.
             </p>
 
-            <div className="mt-6">
-              <button
-                type="button"
-                onClick={() =>
-                  setShowGoogleTokenPanel((current) => !current)
-                }
-                disabled={loading}
-                className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#e3ebf6] bg-white px-5 text-sm font-bold text-[#111827] transition hover:border-[#c8d7f2] hover:bg-[#f9fbff] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <FcGoogle size={20} />
-                Continue with Google
-              </button>
-              <p className="mt-2 text-xs font-medium text-[#7b8ca6]">
-                Use this if your SPCS account is connected to Google.
-              </p>
-              {showGoogleTokenPanel ? (
-                <div className="mt-4 rounded-[22px] border border-[#e3ebf6] bg-[#f9fbff] p-4">
-                  <label className="block">
-                    <span className="text-sm font-bold text-[#1f2937]">
-                      Google ID token
-                    </span>
-                    <textarea
-                      value={googleIdToken}
-                      onChange={(event) => setGoogleIdToken(event.target.value)}
-                      rows={4}
-                      placeholder="Paste the Google ID token from your SDK flow"
-                      className="mt-2 w-full rounded-[18px] border border-[#dce6f3] bg-white px-4 py-3 text-sm font-medium text-[#111827] outline-none placeholder:text-[#94a3b8]"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                    className="mt-3 inline-flex h-11 w-full items-center justify-center rounded-full bg-[#111827] px-5 text-sm font-black text-white transition hover:bg-[#126DEC] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading ? "Connecting Google..." : "Sign in with pasted token"}
-                  </button>
-                </div>
-              ) : null}
-            </div>
+            <GoogleSignInPanel
+              router={router}
+              className="mt-6"
+              title="Continue with Google"
+              description="Use this if your SPCS account is already connected to Google."
+              successMessage="Google login successful"
+            />
 
             <div className="my-6 flex items-center gap-3">
               <div className="h-px flex-1 bg-[#e8eef6]" />

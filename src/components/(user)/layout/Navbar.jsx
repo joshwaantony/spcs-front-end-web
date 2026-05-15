@@ -2,17 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import {
-  ChevronDown,
-  LogOut,
-  Menu,
-  ShoppingCart,
-  User,
-  X,
-} from "lucide-react";
+import { AlertTriangle, ChevronDown, LogOut, Menu, ShoppingCart, User, X } from "lucide-react";
 import { useAdminAuthStore } from "@/store/auth/adminAuth.store";
+import { useToastStore } from "@/store/ui/toast.store";
 
 const STORE_LINKS = [
   {
@@ -51,14 +45,37 @@ export default function Navbar() {
   const [storeOpen, setStoreOpen] = useState(false);
   const [salesOpen, setSalesOpen] = useState(false);
   const [programsOpen, setProgramsOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const user = useAdminAuthStore((state) => state.user);
   const isAuthenticated = useAdminAuthStore((state) => state.isAuthenticated);
+  const logout = useAdminAuthStore((state) => state.logout);
+  const loading = useAdminAuthStore((state) => state.loading);
+  const showToast = useToastStore((state) => state.showToast);
 
   const isStoreActive =
     pathname === "/book-store" ||
     pathname === "/e-book" ||
     pathname === "/audio-book";
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setLogoutOpen(false);
+      setOpen(false);
+      showToast({
+        type: "success",
+        message: "Logged out successfully",
+      });
+      router.push("/home");
+    } catch (error) {
+      showToast({
+        type: "error",
+        message: error.message || "Unable to logout right now.",
+      });
+    }
+  };
 
   return (
     <>
@@ -128,13 +145,16 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 <UserSummary user={user} />
-                <Link
-                  href="/logout"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLogoutOpen(true);
+                  }}
                   className="hidden h-11 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-950 md:inline-flex"
                 >
                   <LogOut size={16} />
                   Logout
-                </Link>
+                </button>
               </>
             ) : (
               <Link
@@ -294,14 +314,16 @@ export default function Navbar() {
                       {user?.email || "Account active"}
                     </p>
                   </div>
-                  <Link
-                    href="/logout"
-                    onClick={() => setOpen(false)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogoutOpen(true);
+                    }}
                     className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:text-slate-950"
                   >
                     <LogOut size={16} />
                     Logout
-                  </Link>
+                  </button>
                 </div>
               ) : (
                 <Link
@@ -325,6 +347,82 @@ export default function Navbar() {
           </div>
         </div>
       </aside>
+
+      {logoutOpen ? (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-slate-950/48 backdrop-blur-[3px]"
+            onClick={() => {
+              if (!loading) {
+                setLogoutOpen(false);
+              }
+            }}
+          />
+
+          <div className="fixed inset-0 z-[70] flex items-end justify-center p-2 min-[360px]:p-3 sm:items-center sm:p-4">
+            <div className="w-full max-w-[29rem] overflow-hidden rounded-[28px] border border-white/85 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_52%,#f4f8ff_100%)] shadow-[0_42px_120px_-56px_rgba(15,23,42,0.5)] min-[360px]:rounded-[32px]">
+              <div className="relative overflow-hidden border-b border-[#edf2f8] px-4 pb-5 pt-4 min-[360px]:px-5 min-[360px]:pb-6 min-[360px]:pt-5 sm:px-6">
+                <div className="absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_top_left,rgba(18,109,236,0.12),transparent_60%)]" />
+
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-3 min-[360px]:gap-4">
+                    <div className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#dbe7f8] bg-white text-[#126DEC] shadow-[0_16px_34px_-24px_rgba(18,109,236,0.45)] min-[360px]:h-12 min-[360px]:w-12">
+                      <AlertTriangle size={20} />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#7b8ca6]">
+                        End session
+                      </p>
+                      <h2 className="mt-2 text-[1.35rem] font-black leading-tight tracking-[-0.03em] text-[#111827] min-[360px]:text-[1.55rem] sm:text-[1.8rem]">
+                        Logout from this device?
+                      </h2>
+                      <p className="mt-3 max-w-md text-[13px] font-medium leading-6 text-[#64748b] min-[360px]:text-sm">
+                        This will securely sign you out here while keeping your
+                        account and past purchases intact.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setLogoutOpen(false)}
+                    disabled={loading}
+                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#e4ebf5] bg-white text-[#64748b] transition hover:border-[#d4deed] hover:text-[#111827] disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="Close logout dialog"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+              </div>
+
+              <div className="bg-white/78 px-3 pb-3 pt-3 min-[360px]:px-4 min-[360px]:pb-4 sm:px-6 sm:pb-6">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setLogoutOpen(false)}
+                    disabled={loading}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#dce6f3] bg-white px-4 text-sm font-black text-[#475569] transition hover:border-[#c7d4e8] hover:bg-[#f8fbff] disabled:cursor-not-allowed disabled:opacity-60 sm:h-13 sm:flex-1"
+                  >
+                    Stay signed in
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    disabled={loading}
+                    className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#111827] px-4 text-sm font-black text-white shadow-[0_18px_32px_-22px_rgba(17,24,39,0.45)] transition hover:bg-[#126DEC] disabled:cursor-not-allowed disabled:opacity-60 sm:h-13 sm:flex-1"
+                  >
+                    <LogOut size={16} />
+                    {loading ? "Signing you out..." : "Yes, logout"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
@@ -419,14 +517,7 @@ function UserSummary({ user }) {
       <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#eef5ff] text-[#126DEC]">
         <User size={16} />
       </span>
-      <span className="min-w-0">
-        <span className="block truncate text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
-          Reader
-        </span>
-        <span className="block max-w-[120px] truncate text-sm font-black text-slate-900">
-          {user?.name || "SPCS Reader"}
-        </span>
-      </span>
+     
     </Link>
   );
 }
