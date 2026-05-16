@@ -55,20 +55,8 @@ export default function GoogleSignInPanel({
 
   return (
     <div className={className}>
-      <div className="rounded-[24px] border border-[#e4ecf7] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] p-4 shadow-[0_16px_40px_-30px_rgba(18,109,236,0.22)] sm:p-5">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#eef5ff]">
-            <FcGoogle size={20} />
-          </span>
-          <div className="min-w-0">
-            <h3 className="text-sm font-black uppercase tracking-[0.16em] text-[#111827]">
-              {title}
-            </h3>
-            <p className="mt-1 text-sm font-medium leading-6 text-[#64748b]">
-              {description}
-            </p>
-          </div>
-        </div>
+      <div>
+      
 
         <div className="relative mt-4 overflow-hidden rounded-[20px] border border-[#dbe6f4] bg-white p-3 sm:p-4">
           {clientId ? (
