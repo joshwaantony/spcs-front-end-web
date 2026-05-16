@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,7 +18,12 @@ import GoogleSignInPanel from "@/components/auth/GoogleSignInPanel";
 
 function AuthHeroPanel() {
   return (
-    <section className="hidden rounded-[36px] border border-white/70 bg-[linear-gradient(145deg,#0f172a_0%,#123767_42%,#126DEC_100%)] p-10 text-white shadow-[0_40px_120px_-48px_rgba(18,109,236,0.6)] lg:flex lg:min-h-[760px] lg:flex-col lg:justify-between">
+    <section className="relative hidden overflow-hidden rounded-[36px] border border-white/70 bg-[linear-gradient(145deg,#0f172a_0%,#123767_42%,#126DEC_100%)] p-10 text-white shadow-[0_40px_120px_-48px_rgba(18,109,236,0.6)] lg:flex lg:min-h-[760px] lg:flex-col lg:justify-between">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-10%] top-[-8%] h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute bottom-[-16%] right-[-4%] h-72 w-72 rounded-full bg-[#7dd3fc]/20 blur-3xl" />
+      </div>
+
       <div>
         <p className="text-[11px] font-black uppercase tracking-[0.26em] text-white/65">
           Reader Access
@@ -31,27 +37,59 @@ function AuthHeroPanel() {
         </p>
       </div>
 
-      <div className="grid gap-4">
-        <div className="rounded-[28px] border border-white/14 bg-white/10 p-6 backdrop-blur">
-          <p className="text-[11px] font-black uppercase tracking-[0.24em] text-white/60">
-            What you get
-          </p>
-          <div className="mt-4 grid gap-3">
-            <FeatureLine label="Restore your reading session instantly" />
-            <FeatureLine label="Keep purchases and cart in one place" />
-            <FeatureLine label="Move between web and future mobile touchpoints" />
+      <div className="group relative mt-12 flex-1">
+      
+
+       
+
+        <div className="absolute bottom-10 left-0 right-0 mx-auto h-[420px] max-w-[560px]">
+          <div className="absolute bottom-10 left-2 z-10 w-[180px] -rotate-[14deg] overflow-hidden rounded-[24px] border border-white/18 bg-white/8 p-3 shadow-[0_30px_80px_-35px_rgba(15,23,42,0.95)] backdrop-blur transition duration-500 ease-out group-hover:-translate-y-3 group-hover:-rotate-[18deg] group-hover:shadow-[0_40px_100px_-38px_rgba(15,23,42,0.98)]">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-[18px]">
+              <Image
+                src="/hero/left.png"
+                alt="Malayalam book cover"
+                fill
+                className="object-cover transition duration-500 ease-out group-hover:scale-[1.04]"
+              />
+            </div>
+          </div>
+
+          <div className="absolute bottom-0 left-1/2 z-30 w-[250px] -translate-x-1/2 overflow-hidden rounded-[30px] border border-white/20 bg-white/10 p-3 shadow-[0_40px_100px_-40px_rgba(2,6,23,0.95)] backdrop-blur transition duration-500 ease-out group-hover:-translate-y-4 group-hover:scale-[1.03] group-hover:shadow-[0_52px_118px_-42px_rgba(2,6,23,1)]">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-[24px]">
+              <Image
+                src="/hero/center.png"
+                alt="Featured Malayalam title"
+                fill
+                className="object-cover transition duration-500 ease-out group-hover:scale-[1.05]"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#020617] via-[#020617]/65 to-transparent" />
+              <div className="absolute bottom-5 left-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/60">
+                  Featured Shelf
+                </p>
+                <p className="mt-2 text-2xl font-black tracking-[-0.03em] text-white">
+                  Aadujeevitham
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-14 right-3 z-20 w-[170px] rotate-[12deg] overflow-hidden rounded-[22px] border border-white/18 bg-white/8 p-3 shadow-[0_28px_75px_-34px_rgba(15,23,42,0.9)] backdrop-blur transition duration-500 ease-out group-hover:-translate-y-2 group-hover:rotate-[16deg] group-hover:shadow-[0_36px_90px_-38px_rgba(15,23,42,0.96)]">
+            <div className="relative aspect-[3/4] overflow-hidden rounded-[16px]">
+              <Image
+                src="/hero/right.png"
+                alt="Malayalam bestseller cover"
+                fill
+                className="object-cover transition duration-500 ease-out group-hover:scale-[1.04]"
+              />
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="rounded-[28px] border border-white/12 bg-[#f8fbff] p-6 text-[#111827]">
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[#7b8ca6]">
-            Support note
-          </p>
-          <p className="mt-3 text-sm font-semibold leading-6 text-[#5f7391]">
-            If your account was created with Google, use the Google sign-in path
-            instead of password login.
-          </p>
-        </div>
+      <div className="grid grid-cols-2 gap-4">
+        <FeatureLine label="Pick up where you left off" />
+        <FeatureLine label="Access eBooks and audiobooks" />
       </div>
     </section>
   );
