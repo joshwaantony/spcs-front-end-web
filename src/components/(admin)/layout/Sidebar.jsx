@@ -27,6 +27,7 @@ import {
   HiFolderOpen,
   HiStar,
   HiChatAlt2,
+  HiAdjustments,
 } from "react-icons/hi";
 
 import { HiOutlineTrophy } from "react-icons/hi2";
@@ -110,6 +111,8 @@ export default function Sidebar() {
       "/admin/gallery",
       "/admin/downloads",
       "/admin/ads",
+      "/admin/pricing-rules",
+      "/admin/rules",
     ].includes(pathname);
 
     setOrdersOpen(
@@ -244,6 +247,7 @@ export default function Sidebar() {
                 <NavItem icon={<HiPhotograph />} label="Gallery" indent active={pathname === "/admin/gallery"} onClick={() => goTo("/gallery")} />
                 <NavItem icon={<HiDownload />} label="Downloads" indent active={pathname === "/admin/downloads"} onClick={() => goTo("/downloads")} />
                 <NavItem icon={<MdCampaign />} label="Ads" indent active={pathname === "/admin/ads"} onClick={() => goTo("/ads")} />
+                <NavItem icon={<HiAdjustments />} label="Rules" indent active={pathname === "/admin/pricing-rules" || pathname === "/admin/rules"} onClick={() => goTo("/pricing-rules")} />
               </div>
             )}
 
