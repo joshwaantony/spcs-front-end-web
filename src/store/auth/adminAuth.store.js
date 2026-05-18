@@ -13,6 +13,7 @@ import {
 } from "@/services/auth/auth.api";
 import {
   AUTH_SESSION_EVENT,
+  AUTH_SESSION_STORAGE_KEY,
   clearStoredSession,
   persistSession,
   readStoredAccessToken,
@@ -31,6 +32,7 @@ const normalizeSessionFromResponse = (data) => ({
 });
 
 let authSessionListenerAttached = false;
+let authStorageListenerAttached = false;
 
 const clearSession = () => clearStoredSession();
 
@@ -131,6 +133,25 @@ export const useAdminAuthStore = create((set, get) => ({
         });
 
         authSessionListenerAttached = true;
+      }
+
+      if (typeof window !== "undefined" && !authStorageListenerAttached) {
+        window.addEventListener("storage", (event) => {
+          if (event.key !== AUTH_SESSION_STORAGE_KEY) {
+            return;
+          }
+
+          const nextAccessToken = readStoredAccessToken();
+          const nextUser = readStoredUser();
+
+          set({
+            accessToken: nextAccessToken,
+            user: nextUser,
+            isAuthenticated: !!nextAccessToken,
+          });
+        });
+
+        authStorageListenerAttached = true;
       }
 
       const existingToken = readStoredAccessToken();
